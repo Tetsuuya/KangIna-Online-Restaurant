@@ -2,7 +2,6 @@ import React from 'react';
 import { Product } from '../../api/productApi';
 import { ProductCard } from './ProductCard';
 
-
 interface ProductGridProps {
   products: Product[];
   isLoading: boolean;
@@ -10,19 +9,18 @@ interface ProductGridProps {
   error?: Error | null;
 }
 
-
 export const ProductGrid: React.FC<ProductGridProps> = ({ products, isLoading, isError, error }) => {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-3 gap-3">
         {[...Array(12)].map((_, i) => (
-          <div key={i} className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="pb-[75%] relative bg-gray-200 animate-pulse"></div>
-            <div className="p-3">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2 animate-pulse"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/4 mb-2 animate-pulse"></div>
-              <div className="h-4 bg-gray-200 rounded w-full mb-3 animate-pulse"></div>
-              <div className="h-9 bg-gray-200 rounded w-full animate-pulse"></div>
+          <div key={i} className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div className="pb-[60%] relative bg-gray-200 animate-pulse"></div>
+            <div className="p-2">
+              <div className="h-3 bg-gray-200 rounded w-3/4 mb-1 animate-pulse"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/4 mb-1 animate-pulse"></div>
+              <div className="h-3 bg-gray-200 rounded w-full mb-2 animate-pulse"></div>
+              <div className="h-6 bg-gray-200 rounded w-full animate-pulse"></div>
             </div>
           </div>
         ))}
@@ -30,32 +28,27 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ products, isLoading, i
     );
   }
 
-
   if (isError) {
     return (
-      <div className="bg-red-50 text-red-600 p-4 rounded-md">
+      <div className="bg-red-50 text-red-600 p-3 rounded-md">
         <p>Error: {error?.message || 'Failed to fetch products'}</p>
       </div>
     );
   }
 
-
   if (products.length === 0) {
     return (
-      <div className="bg-yellow-50 text-yellow-600 p-4 rounded-md">
+      <div className="bg-yellow-50 text-yellow-600 p-3 rounded-md">
         <p>No products found in this category.</p>
       </div>
     );
   }
 
-
   return (
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-3 gap-3">
       {products.map((product) => (
         <ProductCard key={product.id} product={product} />
       ))}
     </div>
   );
 };
-
-

@@ -33,7 +33,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   return (
     <>
       <div
-        className="bg-white rounded-xl shadow-md overflow-hidden border transition-all duration-300 hover:shadow-lg hover:-translate-y-1 w-full h-80 flex flex-col cursor-pointer group"
+        className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 w-full h-80 flex flex-col cursor-pointer group"
         onClick={() => setShowDetails(true)}
       >
         {/* Image container with fixed height */}
@@ -88,7 +88,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
          
           <div className="grid grid-cols-10 gap-2 mt-auto pt-3">
             <button
-              className={`col-span-6 py-1.5 rounded-full text-white text-sm font-medium transition-colors duration-300 ${
+              className={`col-span-6 py-2  rounded-full text-white text-sm font-medium transition-colors duration-300 ${
                 isCartLoading ? 'bg-blue-400' : 'bg-[#32347C] hover:bg-[#ED3F25]'
               }`}
               onClick={(e) => {
@@ -100,7 +100,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               {isCartLoading ? 'Adding...' : 'Add to Cart'}
             </button>
             <button
-              className="col-span-4 py-1.5 rounded-full text-[#32347C] text-sm font-medium border border-[#32347C] bg-white hover:bg-[#32347C] hover:text-white transition-colors duration-300"
+              className="col-span-4 py-1 rounded-full text-[#32347C] text-sm font-medium border border-[#32347C] bg-white hover:bg-[#32347C] hover:text-white transition-colors duration-300"
               onClick={(e) => {
                 e.stopPropagation();
                 setShowDetails(true);

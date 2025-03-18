@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useState } from 'react';
+import { useState, MouseEvent } from 'react'; // Import MouseEvent from React
 import Button from "./ui/Button";
 import LogoRed from "./ui/LogoRed";
 import Navbar from "../components/Sidebar/Navbar";
@@ -8,7 +8,7 @@ const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   // Handle smooth scrolling for mobile menu items
-  const handleMobileScroll = (e, targetId) => {
+  const handleMobileScroll = (e: MouseEvent<HTMLAnchorElement>, targetId: string) => {
     e.preventDefault();
     
     const targetElement = document.getElementById(targetId);

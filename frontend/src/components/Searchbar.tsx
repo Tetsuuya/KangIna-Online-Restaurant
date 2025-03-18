@@ -36,7 +36,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className={`relative ${className}`}>
-      <div className={`relative flex items-center rounded-sm  w-[85%] mx-auto border bg-white px-2 py-3 shadow-lg transition-all ${isFocused ? 'ring-2 ring-gray-200' : ''}`}>
+      <div className={`relative flex items-center rounded-sm  w-[85%] mx-auto bg-white px-2 py-3 shadow-lg transition-all ${isFocused ? 'ring-2 ring-gray-200' : ''}`}>
         <Search size={20} className="text-gray-400 mr-2" strokeWidth={1.5} />
         <input
           type="text"
