@@ -3,7 +3,8 @@ import { useCartStore } from '../../store/CartStore';
 import useAuthStore from '../../store/AuthStore';
 import { useOrderStore } from '../../store/StoreOrders';
 
-// Define interface for cart item   
+
+// Define interface for cart item  
 interface CartItem {
   id: number;
   product: number;
@@ -13,23 +14,26 @@ interface CartItem {
   quantity: number;
 }
 
+
 const RightSidebar = () => {
     // State to manage sidebar visibility on mobile
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    
+   
     // State to manage selected payment method
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
 
+
     // Get the user from authStore
     const { user } = useAuthStore();
-    
+   
     // Using Zustand stores
-    const { items, isLoading, error, fetchCart, removeItem, updateQuantity, getTotalPrice, } = useCartStore();
+    const { items, isLoading, error, fetchCart, removeItem, updateQuantity, getTotalPrice } = useCartStore();
     const { createOrder, isLoading: isOrderLoading } = useOrderStore();
-    
+   
     useEffect(() => {
         fetchCart();  
     }, [fetchCart]);
+
 
     const handleQuantityChange = (productId: number, newQuantity: number): void => {
         if (newQuantity > 0) {
@@ -37,58 +41,125 @@ const RightSidebar = () => {
         }
     };
 
+
     const taxRate = 0.05; // 5% tax
     const taxAmount = getTotalPrice() * taxRate;
     const totalAmount = getTotalPrice() + taxAmount;
+
 
     // Toggle sidebar for mobile
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
     };
 
+
     // Handle order placement
     const handlePlaceOrder = async () => {
       try {
           // Create order
           await createOrder();
-          
+         
           // Refresh the cart after placing the order
           await fetchCart();
-  
+ 
           // Optional: Show success message or redirect
           alert('Order placed successfully!');
       } catch (error) {
           console.error('Failed to place order', error);
           alert('Failed to place order. Please try again.');
       }
-  };
+    };
+
+
+    // Cart item card component
+    const CartItemCard = ({ item }: { item: CartItem }) => {
+        return (
+            <div className="bg-white rounded-lg mb-3 overflow-hidden flex shadow-md">
+                {/* Product image on the left side with fixed dimensions */}
+                <div className="w-16 h-auto bg-gray-100 flex-shrink-0 relative">
+                    {item.product_image ? (
+                        <img
+                            src={item.product_image}
+                            alt={item.product_name}
+                            className="w-full h-full object-cover absolute top-0 left-0 bottom-0 right-0"
+                        />
+                    ) : (
+                        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                            <span className="text-xs text-gray-400">No img</span>
+                        </div>
+                    )}
+                </div>
+               
+                {/* Product details in the middle with text ellipsis */}
+                <div className="flex-grow p-3 min-w-0">
+                    <h4 className="font-medium text-gray-800 truncate" title={item.product_name}>
+                        {item.product_name}
+                    </h4>
+                    <div className="mt-1">
+                        <span className="text-sm text-gray-500">Php {item.product_price.toFixed(2)}</span>
+                    </div>
+                </div>
+               
+                {/* Quantity controls and delete button on the right */}
+                <div className="flex items-center pr-3 flex-shrink-0">
+                    <div className="flex items-center border border-gray-200 rounded-md overflow-hidden mr-2">
+                        <button
+                            className="bg-gray-100 hover:bg-gray-200 text-gray-600 w-6 h-6 flex items-center justify-center"
+                            onClick={() => handleQuantityChange(item.product, item.quantity - 1)}
+                        >
+                            -
+                        </button>
+                        <span className="px-2 text-sm font-medium text-gray-700">{item.quantity}</span>
+                        <button
+                            className="bg-gray-100 hover:bg-gray-200 text-gray-600 w-6 h-6 flex items-center justify-center"
+                            onClick={() => handleQuantityChange(item.product, item.quantity + 1)}
+                        >
+                            +
+                        </button>
+                    </div>
+                   
+                    <button
+                        className="text-gray-400 hover:text-red-500"
+                        onClick={() => removeItem(item.product)}
+                        aria-label="Remove item"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
 
     return (
         <>
             {/* Mobile Cart Toggle Button */}
-            <button 
-                onClick={toggleSidebar} 
+            <button
+                onClick={toggleSidebar}
                 className="fixed bottom-4 right-4 z-50 bg-indigo-800 text-white p-3 rounded-full shadow-lg block md:hidden"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                     {items.length}
                 </span>
             </button>
 
+
             {/* Sidebar - Desktop and Mobile */}
             <div className={`
-                fixed inset-y-0 right-0 w-full md:w-[300px] bg-white h-full overflow-y-auto p-4 md:p-6 flex flex-col shadow-lg 
+                fixed inset-y-0 right-0 w-full md:w-[320px] bg-white h-full overflow-y-auto p-4 md:p-6 flex flex-col shadow-lg
                 transform transition-transform duration-300 ease-in-out
                 ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'}
                 md:translate-x-0 md:relative
                 z-50
             `}>
                 {/* Close button for mobile */}
-                <button 
-                    onClick={toggleSidebar} 
+                <button
+                    onClick={toggleSidebar}
                     className="absolute top-4 left-4 text-gray-600 hover:text-gray-900 block md:hidden"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -96,16 +167,17 @@ const RightSidebar = () => {
                     </svg>
                 </button>
 
-                <h2 className="text-2xl md:text-3xl font-bold text-indigo-900 mb-6 mt-10 md:mt-6">
+
+                <h2 className="text-2xl md:text-4xl font-extrabold text-indigo-900 mb-6 mt-10 md:mt-6">
                     Kain na, {user?.username || 'User'}!
                 </h2>
-                
+                <hr className="border-t border-gray-300 my-2" />
+               
                 {/* Cart items section */}
                 <div className="mb-4 flex-grow overflow-hidden flex flex-col">
-                    <h3 className="text-indigo-700 mb-2">Here's what's on your cart:</h3>
-                    
+                    <h3 className="text-[#F58E26] mb-6 font-bold">Here's what's on your cart:</h3>
                     {/* Scrollable cart container */}
-                    <div className="overflow-y-auto flex-grow">
+                    <div className="overflow-y-auto flex-grow pr-1">
                         {isLoading ? (
                             <p className="text-gray-500">Loading your cart...</p>
                         ) : error ? (
@@ -113,67 +185,15 @@ const RightSidebar = () => {
                         ) : items.length === 0 ? (
                             <p className="text-gray-500">Your cart is empty</p>
                         ) : (
-                            <div className="flex flex-col gap-2 pr-1">
+                            <div className="flex flex-col gap-2">
                                 {items.map((item: CartItem) => (
-                                    <div key={item.id} className="bg-white rounded-lg p-2 mb-2 shadow-sm border border-gray-100 flex items-center">
-                                        {/* Product image */}
-                                        <div className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 rounded-md overflow-hidden bg-gray-50">
-                                            {item.product_image ? (
-                                                <img 
-                                                    src={item.product_image} 
-                                                    alt={item.product_name} 
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                                                    <span className="text-xs text-gray-400">No img</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        
-                                        {/* Product details */}
-                                        <div className="flex flex-col ml-2 flex-grow min-w-0">
-                                            <h4 className="font-medium text-sm text-gray-800 truncate">{item.product_name}</h4>
-                                            
-                                            {/* Price and quantity controls */}
-                                            <div className="flex items-center justify-between mt-1">
-                                                <div className="flex items-center gap-1">
-                                                    <span className="font-medium text-xs">Php {item.product_price.toFixed(2)}</span>
-                                                    
-                                                    {/* Quantity indicator */}
-                                                    <div className="inline-flex items-center border border-gray-200 rounded-full text-xs overflow-hidden ml-15">
-                                                        <button 
-                                                            className="bg-gray-100 hover:bg-gray-200 text-gray-600 w-4 h-4 flex items-center justify-center"
-                                                            onClick={() => handleQuantityChange(item.product, item.quantity - 1)}
-                                                        >
-                                                            -
-                                                        </button>
-                                                        <span className="px-1 text-xs font-medium text-gray-700">{item.quantity}</span>
-                                                        <button 
-                                                            className="bg-gray-100 hover:bg-gray-200 text-gray-600 w-4 h-4 flex items-center justify-center"
-                                                            onClick={() => handleQuantityChange(item.product, item.quantity + 1)}
-                                                        >
-                                                            +
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                
-                                                {/* Delete button */}
-                                                <button 
-                                                    className="text-gray-400 hover:text-red-500 pl-3 bg-gray-50 rounded-full h-5 w-5 flex items-center justify-center"
-                                                    onClick={() => removeItem(item.product)}
-                                                >
-                                                   🗑️
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <CartItemCard key={item.id} item={item} />
                                 ))}
                             </div>
                         )}
                     </div>
                 </div>
-                
+               
                 {/* Order summary and payment */}
                 <div className="mt-auto flex-shrink-0">
                     <div className="bg-gray-100 rounded-lg p-4 mb-4">
@@ -191,13 +211,14 @@ const RightSidebar = () => {
                         </div>
                     </div>
 
+
                     {/* Payment Options */}
                     <div className="grid grid-cols-3 gap-4 mb-4">
                         <div className="flex flex-col items-center">
-                            <button 
+                            <button
                                 className={`flex items-center justify-center p-4 rounded w-16 h-16 ${
-                                    selectedPaymentMethod === 'cash' 
-                                    ? 'bg-indigo-200 border-2 border-indigo-700' 
+                                    selectedPaymentMethod === 'cash'
+                                    ? 'bg-indigo-200 border-2 border-indigo-700'
                                     : 'bg-white border border-gray-300'
                                 }`}
                                 onClick={() => setSelectedPaymentMethod('cash')}
@@ -208,12 +229,12 @@ const RightSidebar = () => {
                             </button>
                             <span className="text-sm mt-2 font-medium">Cash</span>
                         </div>
-                        
+                       
                         <div className="flex flex-col items-center">
-                            <button 
+                            <button
                                 className={`flex items-center justify-center p-4 rounded w-16 h-16 ${
-                                    selectedPaymentMethod === 'card' 
-                                    ? 'bg-indigo-200 border-2 border-indigo-700' 
+                                    selectedPaymentMethod === 'card'
+                                    ? 'bg-indigo-200 border-2 border-indigo-700'
                                     : 'bg-white border border-gray-300'
                                 }`}
                                 onClick={() => setSelectedPaymentMethod('card')}
@@ -224,12 +245,12 @@ const RightSidebar = () => {
                             </button>
                             <span className="text-sm mt-2 font-medium">Credit/Debit</span>
                         </div>
-                        
+                       
                         <div className="flex flex-col items-center">
-                            <button 
+                            <button
                                 className={`flex items-center justify-center p-4 rounded w-16 h-16 ${
-                                    selectedPaymentMethod === 'qr' 
-                                    ? 'bg-indigo-200 border-2 border-indigo-700' 
+                                    selectedPaymentMethod === 'qr'
+                                    ? 'bg-indigo-200 border-2 border-indigo-700'
                                     : 'bg-white border border-gray-300'
                                 }`}
                                 onClick={() => setSelectedPaymentMethod('qr')}
@@ -241,21 +262,22 @@ const RightSidebar = () => {
                             <span className="text-sm mt-2 font-medium">QR Code</span>
                         </div>
                     </div>
-                    
-                    <button 
-                        className="w-full bg-indigo-800 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition"
+                   
+                    <button
+                        className="w-full bg-[#ED3F25] text-white py-3 rounded-full font-semibold hover:bg-[#c41f06] transition"
                         onClick={handlePlaceOrder}
                         disabled={items.length === 0 || isOrderLoading}
                     >
-                        {'Place Order'}
+                        {isOrderLoading ? 'Processing...' : 'Place Order'}
                     </button>
                 </div>
             </div>
 
+
             {/* Overlay for mobile to close sidebar when open */}
             {isSidebarOpen && (
-                <div 
-                    onClick={toggleSidebar} 
+                <div
+                    onClick={toggleSidebar}
                     className="fixed inset-0 bg-black opacity-50 z-40 block md:hidden"
                 ></div>
             )}
@@ -263,4 +285,6 @@ const RightSidebar = () => {
     );
 };
 
+
 export default RightSidebar;
+

@@ -5,33 +5,35 @@ import { useFavoriteStore } from '../../store/StoreFavorites';
 import { useOrderStore } from '../../store/StoreOrders';
 import { ProfileEditModal } from './ProfileEdit';
 
+
 const UserProfilePage = () => {
   const navigate = useNavigate();
-  const { 
-    user, 
-    isLoading: profileLoading, 
+  const {
+    user,
+    isLoading: profileLoading,
     isAuthenticated,
     hasCheckedAuth,
     refreshUserData
   } = useAuthStore();
-  
-  const { 
-    favorites, 
-    fetchFavorites, 
-    isLoading: favoritesLoading 
+ 
+  const {
+    favorites,
+    fetchFavorites,
+    isLoading: favoritesLoading
   } = useFavoriteStore();
-  
-  const { 
-    orders, 
-    fetchOrders, 
-    isLoading: ordersLoading 
+ 
+  const {
+    orders,
+    fetchOrders,
+    isLoading: ordersLoading
   } = useOrderStore();
-  
+ 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [dataFetched, setDataFetched] = useState(false);
-  
+ 
   // Add state to track if we need to refresh user data (only after edit)
   const [shouldRefreshUser, setShouldRefreshUser] = useState(false);
+
 
   // Only fetch favorites and orders once when user is authenticated and auth check is complete
   useEffect(() => {
@@ -44,7 +46,7 @@ const UserProfilePage = () => {
             fetchFavorites().catch(err => console.error("Error fetching favorites:", err)),
             fetchOrders().catch(err => console.error("Error fetching orders:", err))
           ];
-          
+         
           await Promise.all(fetchPromises);
           setDataFetched(true);
         } catch (error) {
@@ -52,10 +54,11 @@ const UserProfilePage = () => {
           setDataFetched(true); // Mark as fetched even on error to prevent infinite retries
         }
       };
-      
+     
       loadData();
     }
   }, [hasCheckedAuth, isAuthenticated, dataFetched, fetchFavorites, fetchOrders]);
+
 
   // Only refresh user data when modal is closed with shouldRefreshUser flag
   useEffect(() => {
@@ -69,16 +72,18 @@ const UserProfilePage = () => {
           setShouldRefreshUser(false);
         }
       };
-      
+     
       doRefresh();
     }
   }, [shouldRefreshUser, refreshUserData, isAuthenticated]);
+
 
   // Handler for modal close to set refresh flag
   const handleModalClose = useCallback(() => {
     setIsEditModalOpen(false);
     setShouldRefreshUser(true); // Set flag to refresh instead of calling directly
   }, []);
+
 
   const getActiveDietaryPreferences = useCallback(() => {
     if (!user) return [];
@@ -98,12 +103,15 @@ const UserProfilePage = () => {
     ].filter(Boolean);
   }, [user]);
 
+
   const activeDietary = getActiveDietaryPreferences();
+
 
   // Show loading state while checking authentication
   if (!hasCheckedAuth || (profileLoading && !user)) {
     return <div className="flex justify-center items-center h-screen">Loading profile...</div>;
   }
+
 
   // Redirect to login if not authenticated
   if (!isAuthenticated || (!user && !profileLoading)) {
@@ -117,10 +125,11 @@ const UserProfilePage = () => {
     );
   }
 
+
   // Get the profile picture URL with cache-busting only if needed
   const getProfilePicture = () => {
     if (!user?.profile_picture) return null;
-    
+   
     // Check if the URL already includes the domain
     if (user.profile_picture.startsWith('http')) {
       return user.profile_picture;
@@ -130,11 +139,13 @@ const UserProfilePage = () => {
     }
   };
 
+
   const profilePictureUrl = getProfilePicture();
+
 
   return (
     <>
-      <div className="max-w-4xl mx-auto p-4 sm:p-6">
+      <div className="max-w-4xl mx-auto p-6">
         {/* Profile Card */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6 relative">
           <button onClick={() => setIsEditModalOpen(true)} className="absolute top-4 right-4 text-gray-600 hover:text-blue-600">
@@ -142,32 +153,32 @@ const UserProfilePage = () => {
               <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
             </svg>
           </button>
-          <div className="p-4 sm:p-6 flex flex-col md:flex-row items-center md:items-start gap-4 sm:gap-6">
-            <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-gray-200 flex items-center justify-center text-3xl text-gray-500 overflow-hidden">
-              {profilePictureUrl ? (
-                <>
-                  <img 
-                    src={profilePictureUrl} 
-                    alt={user?.username?.charAt(0).toUpperCase() || ''} 
-                    className="h-full w-full object-cover rounded-full" 
-                    onLoad={() => console.log('Image loaded successfully:', profilePictureUrl)}
-                    onError={(e) => {
-                      console.error("Profile image failed to load:", profilePictureUrl);
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                  {/* Fallback for debugging */}
-                  <div className="hidden">{profilePictureUrl}</div>
-                </>
-              ) : (
-                user?.full_name ? 
-                  user.full_name.charAt(0).toUpperCase() : 
-                  (user?.username?.charAt(0).toUpperCase() || '?')
-              )}
+          <div className="p-6 flex flex-col md:flex-row items-center md:items-start gap-6">
+            <div className="h-24 w-24 rounded-full bg-gray-200 flex items-center justify-center text-3xl text-gray-500 overflow-hidden">
+            {profilePictureUrl ? (
+              <>
+                <img
+                  src={profilePictureUrl}
+                  alt={user?.username?.charAt(0).toUpperCase() || ''}
+                  className="h-full w-full object-cover rounded-full"
+                  onLoad={() => console.log('Image loaded successfully:', profilePictureUrl)}
+                  onError={(e) => {
+                    console.error("Profile image failed to load:", profilePictureUrl);
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+                {/* Fallback for debugging */}
+                <div className="hidden">{profilePictureUrl}</div>
+              </>
+            ) : (
+              user?.full_name ?
+                user.full_name.charAt(0).toUpperCase() :
+                (user?.username?.charAt(0).toUpperCase() || '?')
+            )}
             </div>
             <div className="text-center md:text-left w-full">
-              <h2 className="text-xl sm:text-2xl font-bold text-indigo-900">{user?.full_name || user?.username || 'No name set'}</h2>
-              <div className="mt-2 text-gray-600 text-sm sm:text-base">
+              <h2 className="text-4xl font-bold text-[#32347C]">{user?.full_name || user?.username || 'No name set'}</h2>
+              <div className="mt-2 text-gray-600">
                 <p>Email address: {user?.email || 'No email set'}</p>
                 <p>Phone number: {user?.phone_number || 'No phone number set'}</p>
               </div>
@@ -176,7 +187,7 @@ const UserProfilePage = () => {
                 <div className="flex flex-wrap gap-2">
                   {activeDietary.length > 0 ? (
                     activeDietary.map((preference, index) => (
-                      <span key={index} className="px-2 py-1 sm:px-3 sm:py-1 bg-blue-100 text-blue-800 rounded-full text-xs sm:text-sm">
+                      <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
                         {preference}
                       </span>
                     ))
@@ -188,75 +199,66 @@ const UserProfilePage = () => {
             </div>
           </div>
         </div>
-        <div className="border-b-2 border-gray-400 my-6 sm:my-10"></div>
-        
-        {/* Responsive grid for favorites and purchases */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {/* Favorites */}
-          <div className="mb-6 lg:mb-0">
-            <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Your favorite meals:</h2>
+        <div className="border-b-2 border-gray-400 my-10"></div>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div>
+            {/* Favorites */}
+            <h2 className="text-xl font-bold mb-4 text-[#ED3F25]">Your favorite meals:</h2>
             {favoritesLoading ? (
               <div className="text-center text-gray-500">Loading favorites...</div>
             ) : favorites.length === 0 ? (
-              <div className="text-center text-gray-500 p-4 bg-gray-50 rounded-lg">No favorite meals yet. Start adding your favorites!</div>
+              <div className="text-center text-gray-500">No favorite meals yet. Start adding your favorites!</div>
             ) : (
-              <div className="grid grid-cols-1 gap-3 max-h-64 sm:max-h-80 overflow-y-auto pr-2">
+              <div className="grid grid-cols-1 gap-4 max-h-75 overflow-y-auto pr-2">
                 {favorites.map((meal) => (
-                  <div 
-                    key={meal.id} 
-                    className="bg-white rounded-lg shadow overflow-hidden flex cursor-pointer hover:shadow-md transition-shadow" 
+                  <div
+                    key={meal.id}
+                    className="bg-white rounded-lg shadow overflow-hidden flex cursor-pointer"
                     onClick={() => navigate(`/product/${meal.id}`)}
                   >
-                    <div className="min-w-16 h-16 sm:min-w-20 sm:h-20 flex-shrink-0 rounded-md overflow-hidden bg-gray-50">
+                    <div className="w-full h-full md:w-20 md:h-20 flex-shrink-0 rounded-md overflow-hidden bg-gray-50">
                       {meal.image_url ? (
                         <img src={meal.image_url} alt={meal.name} className="h-full w-full object-cover" />
                       ) : (
                         <div className="h-full w-full bg-gray-300 flex items-center justify-center text-gray-500">No Image</div>
                       )}
                     </div>
-                    <div className="p-2 sm:p-3 flex-grow">
-                      <h3 className="font-medium text-xs sm:text-sm">{meal.name}</h3>
-                      <p className="text-xs text-gray-500 mt-1 truncate hidden sm:block">{meal.description}</p>
-                      <p className="text-xs sm:text-sm font-semibold text-black mt-1">₱{Number(meal.price || 0).toFixed(2)}</p>
+                    <div className="w-2/3 p-3">
+                      <h3 className="font-medium text-sm">{meal.name}</h3>
+                      <p className="text-xs text-gray-500 mt-1 truncate">{meal.description}</p>
+                      <p className="text-sm font-semibold text-black mt-1">₱{Number(meal.price || 0).toFixed(2)}</p>
                     </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
-          
           {/* Recent Purchase */}
           <div>
-            <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Recently purchased:</h2>
+            <h2 className="text-xl font-bold mb-4 text-[#ED3F25]">Recently purchased:</h2>
             {ordersLoading ? (
               <div className="text-center text-gray-500">Loading orders...</div>
             ) : orders.length === 0 ? (
-              <div className="text-center text-gray-500 p-4 bg-gray-50 rounded-lg">No recent orders yet. Start shopping!</div>
+              <div className="text-center text-gray-500">No recent orders yet. Palit na bai!</div>
             ) : (
-              <div className="grid grid-cols-1 gap-3 max-h-64 sm:max-h-80 overflow-y-auto pr-2">
+              <div className="grid grid-cols-1 gap-2 max-h-75 overflow-y-auto pr-2">
                 {orders.map((order) => (
-                  <div key={order.id} className="bg-white rounded-lg shadow overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="p-3 sm:p-4">
-                      <div>
-                        <div className="flex justify-between items-start">
-                          <p className="text-xs sm:text-sm text-gray-500">
-                            Ordered on {new Date(order.created_at).toLocaleDateString()}
-                          </p>
-                          <p className="text-xs sm:text-sm font-semibold">
-                            ₱{Number(order.total_amount).toFixed(2)}
-                          </p>
+                  <div key={order.id} className="bg-white rounded-lg shadow overflow-hidden">
+                    <div className="p-1">
+                      <div className="mb-2">
+                        <p className="text-sm text-gray-500">Ordered on {new Date(order.created_at).toLocaleDateString()}</p>
+                        <div className="mt-2">
+                          <p className="text-sm font-semibold">₱{Number(order.total_amount).toFixed(2)}</p>
+                          <p className="text-xs text-gray-600 mt-1">{order.items.length} item{order.items.length !== 1 ? 's' : ''}</p>
                         </div>
-                        <p className="text-xs text-gray-600 mt-1">
-                          {order.items.length} item{order.items.length !== 1 ? 's' : ''}
-                        </p>
                         {order.items.length > 0 && (  
-                          <div className="mt-2 pt-2 border-t border-gray-100">
-                            <p className="text-xs sm:text-sm font-medium truncate">{order.items[0].product_name}</p>
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <p className="text-sm font-medium">{order.items[0].product_name}</p>
                             {order.items.length > 1 && (
-                              <p className="text-xs sm:text-sm font-medium truncate">{order.items[1].product_name}</p>
+                              <p className="text-sm font-medium">{order.items[1].product_name}</p>
                             )}
                             {order.items.length > 2 && (
-                              <p className="text-xs text-gray-500 mt-1">+{order.items.length - 2} more</p>
+                              <p className="text-xs text-gray-500 mt-1">See more</p>
                             )}
                           </div>
                         )}
@@ -299,4 +301,6 @@ const UserProfilePage = () => {
   );
 };
 
+
 export default UserProfilePage;
+

@@ -2,9 +2,10 @@ import React from 'react';
 import { CategoryOption } from '../../api/productApi';
 import image1 from '../../assets/categories/category1.png';
 import image2 from '../../assets/categories/category2.png';
-import image3 from '../../assets/categories/category3.png';     
+import image3 from '../../assets/categories/category3.png';    
 import image4 from '../../assets/categories/category4.png';
 import image5 from '../../assets/categories/category5.png';
+
 
 interface CategorySelectorProps {
   categories: CategoryOption[];
@@ -14,14 +15,19 @@ interface CategorySelectorProps {
   isError: boolean;
 }
 
-// Category-to-image and style mapping
-const categoryStyles: Record<string, { image: string; bgColor: string; textColor: string }> = {
-  ALL: { image: image1, bgColor: 'bg-white', textColor: 'text-black' },
-  AGAHAN: { image: image2, bgColor: 'bg-white', textColor: 'text-black' },
-  TANGHALIAN: { image: image3, bgColor: 'bg-white', textColor: 'text-black' },
-  HAPUNAN: { image: image4, bgColor: 'bg-white', textColor: 'text-black' },
-  MERIENDA: { image: image5, bgColor: 'bg-white', textColor: 'text-black' }
+
+const categoryStyles: Record<string, { image: string; bgColor: string; textColor: string; borderColor: string }> = {
+  ALL: { image: image1, bgColor: 'bg-white', textColor: 'text-black', borderColor: 'border-indigo-700' },
+  AGAHAN: { image: image2, bgColor: 'bg-white', textColor: 'text-black', borderColor: 'border-red-500' },
+  TANGHALIAN: { image: image3, bgColor: 'bg-white', textColor: 'text-black', borderColor: 'border-yellow-500' },
+  HAPUNAN: { image: image4, bgColor: 'bg-white', textColor: 'text-black', borderColor: 'border-indigo-700' },
+  MERIENDA: { image: image5, bgColor: 'bg-white', textColor: 'text-black', borderColor: 'border-red-500' }
 };
+
+
+// Define the custom order for categories
+const categoryOrder = ['ALL', 'AGAHAN', 'TANGHALIAN', 'HAPUNAN', 'MERIENDA'];
+
 
 export const CategorySelector: React.FC<CategorySelectorProps> = ({
   categories,
@@ -34,54 +40,68 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
     return (
       <div className="mb-6 flex justify-center gap-2">
         {[1, 2, 3, 4].map(i => (
-          <div key={i} className="h-24 w-20 md:h-40 md:w-40 rounded-lg bg-gray-200 animate-pulse"></div>
+          <div key={i} className="h-40 w-40 rounded-lg bg-gray-200 animate-pulse"></div>
         ))}
       </div>
     );
   }
 
+
   if (isError) {
     return <div className="mb-6 text-red-500">Failed to load categories</div>;
   }
 
+
+  // Sort categories based on the custom order
+  const sortedCategories = [...categories].sort((a, b) => {
+    const aIndex = categoryOrder.indexOf(a.value.toUpperCase());
+    const bIndex = categoryOrder.indexOf(b.value.toUpperCase());
+   
+    // Handle any categories not in the order array
+    if (aIndex === -1 && bIndex === -1) return 0;
+    if (aIndex === -1) return 1;
+    if (bIndex === -1) return -1;
+   
+    return aIndex - bIndex;
+  });
+
+
   return (
     <div className="mb-6">
-      <div className="flex justify-start md:justify-center gap-3 overflow-x-auto py-2 px-4 md:px-0">
-        {categories.map((category) => {
+      <div className="flex justify-center gap-3 overflow-x-auto py-2">
+        {sortedCategories.map((category) => {
           const style = categoryStyles[category.value.toUpperCase()] || {
             image: '/images/default.jpg',
             bgColor: 'bg-white',
-            textColor: 'text-black'
+            textColor: 'text-black',
+            borderColor: 'border-gray-200'
           };
 
-          const subtitle = 
-            category.value.toLowerCase() === 'all' ? '18 items' : 
+
+          const subtitle =
+            category.value.toLowerCase() === 'all' ? '18 items' :
             category.value.toLowerCase() === 'agahan' ? '5 items' :
             category.value.toLowerCase() === 'tanghalian' ? '4 items' :
             category.value.toLowerCase() === 'hapunan' ? '4 items' :
             category.value.toLowerCase() === 'merienda' ? '5 items' : '';
 
+
           return (
             <button
               key={category.value}
               onClick={() => onCategorySelect(category.value)}
-              className={`flex flex-col flex-shrink-0
-                ${selectedCategory === category.value ? 'ring-2 md:ring-1 ring-black' : ''}
-                md:items-start md:p-4 md:w-32 md:h-32 md:rounded-lg md:shadow-lg md:border md:border-gray-200 md:transition-all
-                items-center p-2 w-20 h-24 rounded-lg shadow-lg border border-gray-200 transition-all
-                ${style.bgColor} ${style.textColor}`}
+              className={`flex flex-col items-start p-4 w-32 h-32 rounded-lg shadow-lg transition-all
+                ${style.bgColor} ${style.textColor}
+                ${selectedCategory === category.value
+                  ? `border ${style.borderColor}`
+                  : 'border border-gray-200'}`}
             >
               <img
                 src={style.image}
                 alt={category.label}
-                className="w-10 h-10 md:w-13 md:h-13 object-contain mb-2"
+                className="w-13 h-13 object-contain mb-2"
               />
-              {/* Mobile view - just category name */}
-              <div className="block md:hidden text-center w-full">
-                <div className="text-xs font-medium truncate">{category.label}</div>
-              </div>
-              {/* Desktop view - original layout */}
-              <div className="hidden md:block w-full text-left">
+              <div className="w-full text-left">
                 <div className="text-sm font-medium">{category.label}</div>
                 <div className="text-xs text-gray-500">{subtitle}</div>
               </div>
@@ -92,3 +112,4 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
     </div>
   );
 };
+
