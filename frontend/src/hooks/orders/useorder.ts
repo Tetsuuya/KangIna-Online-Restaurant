@@ -1,50 +1,39 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { orderApi } from '../../api/orders/orders';
+import { createOrder, getOrders } from '../../api/orders/orders';
 import { toast } from 'sonner';
-import { OrderState, Order } from '../../utils/types';
+import { useAuthStore } from '../auth/useauth';
 
-export const useOrderStore = (): OrderState => {
+export const useOrders = () => {
   const queryClient = useQueryClient();
+  const { isAuthenticated } = useAuthStore();
 
-  // Query for fetching orders
-  const { data: orders = [], isLoading, error } = useQuery({
+  const { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders'],
-    queryFn: orderApi.getRecentOrders,
-    staleTime: 1000 * 60 * 5, // Consider data stale after 5 minutes
+    queryFn: getOrders,
+    enabled: isAuthenticated,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  // Create order mutation
   const createOrderMutation = useMutation({
-    mutationFn: orderApi.createOrder,
+    mutationFn: createOrder,
     onSuccess: (newOrder) => {
-      // Update the orders list with the new order
-      queryClient.setQueryData(['orders'], (old: Order[] = []) => [newOrder, ...old]);
+      queryClient.setQueryData(['orders'], (old: typeof orders = []) => [newOrder, ...old]);
       toast.success('Order created successfully');
     },
-    onError: (error) => {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to create order';
-      toast.error(errorMessage);
-    },
+    onError: () => toast.error('Failed to create order'),
   });
 
-  // Fetch orders function
-  const fetchOrders = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['orders'] });
-  };
-
-  // Create order function
-  const createOrder = async () => {
+  const handleCreateOrder = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to create an order');
+      return;
+    }
     await createOrderMutation.mutateAsync();
   };
 
   return {
     orders,
     isLoading,
-    error: error as string | null,
-    
-    // Actions
-    createOrder,
-    fetchOrders,
-    clearError: () => {}, // No-op since errors are handled by mutations
+    createOrder: handleCreateOrder,
   };
 };

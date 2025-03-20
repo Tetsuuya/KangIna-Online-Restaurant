@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authService } from '../../api/auth/auth';
 import { AuthUser, RegisterData, DietaryPreferences } from '../../utils/types';
 import { ACCESS_TOKEN, REFRESH_TOKEN } from '../../api/constants';
-import { setFavoriteUserId, clearFavoriteStore } from '../favorites/usefavorites';
 
 export const useAuthStore = () => {
   const queryClient = useQueryClient();
@@ -22,12 +21,8 @@ export const useAuthStore = () => {
     onSuccess: (data) => {
       localStorage.setItem(ACCESS_TOKEN, data.access);
       localStorage.setItem(REFRESH_TOKEN, data.refresh);
-      
-      if (data.user?.id) {
-        setFavoriteUserId(data.user.id);
-        queryClient.invalidateQueries({ queryKey: ['favorites', data.user.id] });
-      }
       queryClient.setQueryData(['user'], data.user);
+      queryClient.invalidateQueries({ queryKey: ['favorites'] });
     },
   });
 
@@ -39,7 +34,6 @@ export const useAuthStore = () => {
       localStorage.setItem(REFRESH_TOKEN, data.refresh);
       
       if (data.user?.id) {
-        setFavoriteUserId(data.user.id);
         queryClient.invalidateQueries({ queryKey: ['favorites', data.user.id] });
       }
       queryClient.setQueryData(['user'], data.user);
@@ -58,7 +52,7 @@ export const useAuthStore = () => {
     onSettled: () => {
       localStorage.removeItem(ACCESS_TOKEN);
       localStorage.removeItem(REFRESH_TOKEN);
-      clearFavoriteStore();
+      queryClient.setQueryData(['favorites'], []);
       queryClient.setQueryData(['cart'], []);
       queryClient.setQueryData(['user'], null);
       queryClient.invalidateQueries();

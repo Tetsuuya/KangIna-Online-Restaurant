@@ -1,5 +1,5 @@
 import React from 'react';
-import { Product, ProductGridProps } from '../../utils/types';
+import { ProductGridProps } from '../../utils/types';
 import { ProductCard } from './ProductCard';
 
 export const ProductGrid: React.FC<ProductGridProps> = ({ products, isLoading, isError, error }) => {

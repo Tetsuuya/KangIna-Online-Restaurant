@@ -18,7 +18,7 @@ const categoryStyles: Record<string, { image: string; bgColor: string; textColor
 const categoryOrder = ['ALL', 'AGAHAN', 'TANGHALIAN', 'HAPUNAN', 'MERIENDA'];
 
 export const CategorySelector: React.FC<CategorySelectorProps> = ({
-  categories,
+  categories = [],
   selectedCategory,
   onCategorySelect,
   isLoading,
@@ -95,4 +95,4 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
       </div>
     </div>
   );
-};
+}; 

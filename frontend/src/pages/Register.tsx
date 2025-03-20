@@ -6,6 +6,7 @@ import FoodBlue1 from '../assets/FoodBlue1.png';
 import Food1 from '../assets/Food1.png';
 import LogoBlue from '../components/ui/LogoBlue';
 import { useAuthStore } from '../hooks/auth/useauth';
+import { toast } from 'sonner';
 
 const Register = () => {
   const [username, setUsername] = useState('');
@@ -14,7 +15,7 @@ const Register = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
-  const { register, login, isLoading, error } = useAuthStore();
+  const { register, isLoading, error } = useAuthStore();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,12 +31,10 @@ const Register = () => {
         full_name: fullName
       });
       
-      // After successful registration, automatically log in
-      await login({ email, password });
-      
+      toast.success('Registration successful! Please login to continue.');
       setIsExiting(true);
       setTimeout(() => {
-        navigate('/home', { replace: true });
+        navigate('/login', { replace: true });
       }, 300);
     } catch (err) {
       console.error("Registration failed:", err);
@@ -215,7 +214,7 @@ const Register = () => {
                   initial="hidden"
                   animate="visible"
                 >
-                  {error.response?.data?.error || 'Registration failed. Please try again.'}
+                  {(error as any)?.response?.data?.error || 'Registration failed. Please try again.'}
                 </motion.p>
               )}
              

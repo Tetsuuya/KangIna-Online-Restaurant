@@ -1,154 +1,169 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getCartItems, addToCart, removeFromCart, updateCartItemQuantity } from '../../api/cart/cartApi';
 import { toast } from 'sonner';
-import { CartState, CartItem } from '../../utils/types';
 import { useAuthStore } from '../auth/useauth';
+import { CartItem, Product } from '../../utils/types';
+import { useProducts } from '../products/useProducts';
+import { useMemo } from 'react';
 
-export const useCartStore = (): CartState => {
+interface CartContext {
+  previousCart: CartItem[] | undefined;
+}
+
+export const useCart = () => {
   const queryClient = useQueryClient();
-  const { isAuthenticated, hasCheckedAuth } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
+  const { products } = useProducts();
 
-  // Query for fetching cart items
-  const { data: items = [], isLoading: isInitialLoading, error } = useQuery({
+  // Optimize query with better caching and stale time
+  const { data: items = [], isLoading } = useQuery<CartItem[]>({
     queryKey: ['cart'],
-    queryFn: getCartItems,
-    staleTime: 1000 * 60 * 5, // Consider data stale after 5 minutes
-    enabled: isAuthenticated && hasCheckedAuth, // Only fetch when user is authenticated and auth check is complete
-    refetchOnMount: true, // Always refetch when component mounts
-    refetchOnWindowFocus: true, // Refetch when window regains focus
+    queryFn: async () => {
+      const data = await getCartItems();
+      return data;
+    },
+    enabled: isAuthenticated,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 30, // 30 minutes
+    refetchOnWindowFocus: false, // Prevent refetch on window focus
   });
 
-  // Add item mutation
-  const addItemMutation = useMutation({
-    mutationFn: ({ productId, quantity }: { productId: number; quantity: number }) => 
-      addToCart(productId, quantity),
+  // Memoize products map to prevent unnecessary recalculations
+  const productsMap = useMemo(() => {
+    return products.reduce((acc, product) => {
+      acc[product.id] = product;
+      return acc;
+    }, {} as Record<number, Product>);
+  }, [products]);
+
+  // Memoize total calculations
+  const { totalItems, totalPrice } = useMemo(() => {
+    const itemsTotal = items.reduce((total: number, item: CartItem) => total + item.quantity, 0);
+    const priceTotal = items.reduce((total: number, item: CartItem) => total + (item.product_price * item.quantity), 0);
+    return { totalItems: itemsTotal, totalPrice: priceTotal };
+  }, [items]);
+
+  // Optimize mutations with optimistic updates
+  const addItemMutation = useMutation<CartItem, Error, { productId: number; quantity: number }, CartContext>({
+    mutationFn: ({ productId, quantity }) => addToCart(productId, quantity),
+    onMutate: async ({ productId, quantity }) => {
+      await queryClient.cancelQueries({ queryKey: ['cart'] });
+      const previousCart = queryClient.getQueryData<CartItem[]>(['cart']);
+      
+      const newItem: CartItem = {
+        id: Date.now(), // Temporary ID
+        product: productId,
+        quantity,
+        product_price: productsMap[productId]?.price || 0,
+        product_name: productsMap[productId]?.name || '',
+      };
+
+      queryClient.setQueryData<CartItem[]>(['cart'], old => {
+        if (!old) return [newItem];
+        const existingItem = old.find(item => item.product === productId);
+        if (existingItem) {
+          return old.map(item =>
+            item.product === productId
+              ? { ...item, quantity: item.quantity + quantity }
+              : item
+          );
+        }
+        return [...old, newItem];
+      });
+
+      return { previousCart };
+    },
+    onError: (err, _newTodo, context) => {
+      if (context?.previousCart) {
+        queryClient.setQueryData(['cart'], context.previousCart);
+      }
+      toast.error(err.message || 'Failed to add item to cart');
+    },
     onSuccess: () => {
-      // Invalidate and refetch cart data after successful addition
-      queryClient.invalidateQueries({ queryKey: ['cart'] });
-      toast.success('Item added to cart successfully');
-    },
-    onError: (error) => {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to add item to cart';
-      toast.error(errorMessage);
+      toast.success('Item added to cart');
     },
   });
 
-  // Remove item mutation
-  const removeItemMutation = useMutation({
+  const removeItemMutation = useMutation<void, Error, number, CartContext>({
     mutationFn: removeFromCart,
     onMutate: async (productId) => {
       await queryClient.cancelQueries({ queryKey: ['cart'] });
-      const previousItems = queryClient.getQueryData(['cart']);
-
-      queryClient.setQueryData(['cart'], (old: CartItem[] = []) => 
-        old.filter(item => item.product !== productId)
+      const previousCart = queryClient.getQueryData<CartItem[]>(['cart']);
+      queryClient.setQueryData<CartItem[]>(['cart'], old => 
+        old?.filter(item => item.product !== productId) || []
       );
-
-      return { previousItems };
+      return { previousCart };
+    },
+    onError: (err, _productId, context) => {
+      if (context?.previousCart) {
+        queryClient.setQueryData(['cart'], context.previousCart);
+      }
+      toast.error(err.message || 'Failed to remove item');
     },
     onSuccess: () => {
       toast.success('Item removed from cart');
     },
-    onError: (error, _, context) => {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to remove item from cart';
-      if (context?.previousItems) {
-        queryClient.setQueryData(['cart'], context.previousItems);
-      }
-      toast.error(errorMessage);
-    },
   });
 
-  // Update quantity mutation
-  const updateQuantityMutation = useMutation({
-    mutationFn: ({ productId, quantity }: { productId: number; quantity: number }) => 
-      updateCartItemQuantity(productId, quantity),
-    onMutate: async ({ productId, quantity }) => {
-      await queryClient.cancelQueries({ queryKey: ['cart'] });
-      const previousItems = queryClient.getQueryData(['cart']);
-
-      queryClient.setQueryData(['cart'], (old: CartItem[] = []) => 
-        old.map(item => 
-          item.product === productId ? { ...item, quantity } : item
-        )
-      );
-
-      return { previousItems };
-    },
+  const updateQuantityMutation = useMutation<CartItem, Error, { productId: number; quantity: number }>({
+    mutationFn: ({ productId, quantity }) => updateCartItemQuantity(productId, quantity),
     onSuccess: () => {
-      toast.success('Cart updated successfully');
+      // Refetch cart data to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
     },
-    onError: (error, _, context) => {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update item quantity';
-      if (context?.previousItems) {
-        queryClient.setQueryData(['cart'], context.previousItems);
-      }
-      toast.error(errorMessage);
-    },
+    onError: (err) => {
+      toast.error(err.message || 'Failed to update cart');
+    }
   });
 
-  // Fetch cart function
-  const fetchCart = async () => {
-    if (!isAuthenticated) {
-      toast.error('Please log in to view your cart');
-      return;
-    }
-    await queryClient.invalidateQueries({ queryKey: ['cart'] });
-  };
-
-  // Add item function
   const addItem = async (productId: number, quantity = 1) => {
     if (!isAuthenticated) {
       toast.error('Please log in to add items to cart');
       return;
     }
-    await addItemMutation.mutateAsync({ productId, quantity });
+    try {
+      await addItemMutation.mutateAsync({ productId, quantity });
+    } catch (error) {
+      // Error is handled by mutation
+    }
   };
 
-  // Remove item function
   const removeItem = async (productId: number) => {
     if (!isAuthenticated) {
-      toast.error('Please log in to remove items from cart');
+      toast.error('Please log in to remove items');
       return;
     }
-    await removeItemMutation.mutateAsync(productId);
+    try {
+      await removeItemMutation.mutateAsync(productId);
+    } catch (error) {
+      // Error is handled by mutation
+    }
   };
 
-  // Update quantity function
   const updateQuantity = async (productId: number, quantity: number) => {
     if (!isAuthenticated) {
-      toast.error('Please log in to update cart items');
+      toast.error('Please log in to update cart');
       return;
     }
-    if (quantity <= 0) {
-      await removeItem(productId);
-    } else {
-      await updateQuantityMutation.mutateAsync({ productId, quantity });
+    try {
+      if (quantity <= 0) {
+        await removeItem(productId);
+      } else {
+        await updateQuantityMutation.mutateAsync({ productId, quantity });
+      }
+    } catch (error) {
+      // Error is handled by mutation
     }
-  };
-
-  // Computed functions
-  const getTotalItems = () => {
-    return items.reduce((total, item) => total + item.quantity, 0);
-  };
-
-  const getTotalPrice = () => {
-    return items.reduce((total, item) => total + (item.product_price * item.quantity), 0);
   };
 
   return {
     items,
-    isLoading: isInitialLoading,
-    loadingProductIds: [],
-    error: error as string | null,
-
-    // Actions
-    fetchCart,
+    products: productsMap,
+    isLoading,
     addItem,
     removeItem,
     updateQuantity,
-
-    // Computed
-    getTotalItems,
-    getTotalPrice,
+    getTotalItems: () => totalItems,
+    getTotalPrice: () => totalPrice,
   };
 };

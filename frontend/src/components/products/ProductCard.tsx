@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { ProductCardProps } from '../../utils/types';
-import { useCartStore } from '../../hooks/cart/usecart';
-import { useFavoriteStore } from '../../hooks/favorites/usefavorites';
+import { useCart } from '../../hooks/cart/usecart';
+import { useFavorites } from '../../hooks/favorites/usefavorites';
 import { ProductDetailModal } from './ProductDetailModal';
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+export const ProductCard: React.FC<ProductCardProps> = memo(({ product }) => {
   // Using Zustand stores for cart and favorites management
-  const { addItem, isLoading: isCartLoading } = useCartStore();
-  const { toggleFavorite, isFavorite } = useFavoriteStore();
+  const { addItem, isLoading: isCartLoading } = useCart();
+  const { toggleFavorite, isFavorite } = useFavorites();
  
   // Get favorite status directly from the store
   const isFav = isFavorite(product.id);
@@ -15,13 +15,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   // State for controlling the detail modal
   const [showDetails, setShowDetails] = useState(false);
  
-  const handleAddToCart = () => {
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
     addItem(product.id);
   };
  
-  const handleToggleFavorite = (e?: React.MouseEvent) => {
-    e?.stopPropagation(); // Prevent triggering parent click events if event exists
+  const handleToggleFavorite = (e: React.MouseEvent) => {
+    e.stopPropagation();
     toggleFavorite(product.id);
+  };
+
+  const handleViewDetails = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDetails(true);
   };
  
   return (
@@ -37,6 +43,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               src={product.image_url}
               alt={product.name}
               className="w-full h-full object-cover rounded-lg transition-transform duration-500 group-hover:scale-105"
+              loading="lazy"
             />
           ) : (
             <div className="w-full h-full bg-gray-200 flex items-center justify-center rounded-lg">
@@ -45,7 +52,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           )}
         </div>
        
-        {/* Content area with flex to use remaining space */}
+        {/* Content area */}
         <div className="p-4 flex flex-col flex-grow justify-between">
           <div className="mb-2">
             <div className="flex items-center justify-between">
@@ -60,17 +67,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
-                  className={`w-5 h-5 transition-all duration-300 ${
-                  isFav
-                    ? 'fill-red-500 stroke-red-500'
-                    : 'fill-none stroke-[#545454] hover:fill-red-500 hover:stroke-red-500'
+                  className={`w-5 h-5 transition-colors duration-300 ${
+                    isFav
+                      ? 'fill-red-500 stroke-red-500'
+                      : 'fill-none stroke-[#545454] hover:fill-red-500 hover:stroke-red-500'
                   }`}
                   strokeWidth="2"
                 >
                   <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                   />
                 </svg>
               </button>
@@ -82,23 +89,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
          
           <div className="grid grid-cols-10 gap-2 mt-auto pt-3">
             <button
-              className={`col-span-6 py-2  rounded-full text-white text-sm font-medium transition-colors duration-300 ${
+              className={`col-span-6 py-2 rounded-full text-white text-sm font-medium transition-colors duration-300 ${
                 isCartLoading ? 'bg-blue-400' : 'bg-[#32347C] hover:bg-[#ED3F25]'
               }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleAddToCart();
-              }}
+              onClick={handleAddToCart}
               disabled={isCartLoading}
             >
               {isCartLoading ? 'Adding...' : 'Add to Cart'}
             </button>
             <button
               className="col-span-4 py-1 rounded-full text-[#32347C] text-sm font-medium border border-[#32347C] bg-white hover:bg-[#32347C] hover:text-white transition-colors duration-300"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowDetails(true);
-              }}
+              onClick={handleViewDetails}
             >
               View
             </button>
@@ -110,11 +111,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <ProductDetailModal
           product={product}
           onClose={() => setShowDetails(false)}
-          onToggleFavorite={() => handleToggleFavorite()}
+          onToggleFavorite={() => toggleFavorite(product.id)}
         />
       )}
     </>
   );
-};
+});
 
 

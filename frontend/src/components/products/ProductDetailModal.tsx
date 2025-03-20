@@ -1,7 +1,7 @@
 import React from 'react';
 import { ProductDetailModalProps } from '../../utils/types';
-import { useFavoriteStore } from '../../hooks/favorites/usefavorites';
-import { useCartStore } from '../../hooks/cart/usecart';
+import { useFavorites } from '../../hooks/favorites/usefavorites';
+import { useCart } from '../../hooks/cart/usecart';
 import { useAuthStore } from '../../hooks/auth/useauth';
 import { useNavigate } from 'react-router-dom';
 
@@ -11,8 +11,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   onToggleFavorite
 }) => {
   const navigate = useNavigate();
-  const { isFavorite } = useFavoriteStore();
-  const { addItem, isLoading: isCartLoading } = useCartStore();
+  const { isFavorite } = useFavorites();
+  const { addItem, isLoading: isCartLoading } = useCart();
   const { isAuthenticated } = useAuthStore();
 
   // Safe price formatting function

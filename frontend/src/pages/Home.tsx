@@ -1,63 +1,30 @@
 // src/pages/Home.tsx
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import LeftSidebar from '../components/Sidebar/LeftSidebar';
 import RightSidebar from '../components/Sidebar/RightSidebar';
 import useAppStore from '../store/HomeUserStore';
 import { useProducts } from '../hooks/products/useProducts';
-import { CategorySelector } from '../components/products';
+import { CategorySelector } from '../components/products/CatergorySelector';
 import { ProductGrid } from '../components/products/ProductGrid';
 import SearchBar from '../components/Searchbar';
 import UserProfile from '../components/userprofile/UserProfile';
-import { Product } from '../utils/types';
 import { useAuthStore } from '../hooks/auth/useauth';
 
 const Home: React.FC = () => {
     const { activeSection } = useAppStore();
     const { isAuthenticated } = useAuthStore();
-    const [searchQuery, setSearchQuery] = useState('');
-    const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
    
     const {
-        categoriesQuery,
-        productsQuery,
+        categories,
+        products,
         selectedCategory,
-        handleCategorySelect
-    } = useProducts();
-   
-    const {
-        data: categories = [],
-        isLoading: categoriesLoading,
-        isError: categoriesError
-    } = categoriesQuery;
-   
-    const {
-        data: products = [],
+        handleCategorySelect,
+        handleSearch,
+        searchQuery,
         isLoading: productsLoading,
         isError: productsError,
         error: productsErrorDetails
-    } = productsQuery;
-
-    // Handle search functionality locally
-    useEffect(() => {
-        if (searchQuery.trim() === '') {
-            // If search is empty, show all products from current category
-            setFilteredProducts(products);
-        } else {
-            // Filter products based on search query
-            const filtered = products.filter(product =>
-                product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (product.description &&
-                 product.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                (product.category &&
-                 product.category.toLowerCase().includes(searchQuery.toLowerCase()))
-            );
-            setFilteredProducts(filtered);
-        }
-    }, [searchQuery, products]);
-
-    const handleSearch = (query: string) => {
-        setSearchQuery(query);
-    };
+    } = useProducts();
 
     return (
         <div className="flex h-screen overflow-hidden">
@@ -78,15 +45,15 @@ const Home: React.FC = () => {
                                 categories={categories}
                                 selectedCategory={selectedCategory}
                                 onCategorySelect={handleCategorySelect}
-                                isLoading={categoriesLoading}
-                                isError={categoriesError}
+                                isLoading={productsLoading}
+                                isError={productsError}
                             />
                             <div className="border-b-1 border-gray-400 my-6 w-[92%] mx-auto"></div>
                            
                             {searchQuery.trim() !== '' && (
                                 <div className="mb-4 text-lg">
                                     Search results for: <span className="font-semibold">{searchQuery}</span>
-                                    {filteredProducts.length === 0 && !productsLoading && (
+                                    {products.length === 0 && !productsLoading && (
                                         <span className="ml-2 text-gray-500">
                                             (No results found)
                                         </span>
@@ -95,7 +62,7 @@ const Home: React.FC = () => {
                             )}
                            
                             <ProductGrid
-                                products={filteredProducts}
+                                products={products}
                                 isLoading={productsLoading}
                                 isError={productsError}
                                 error={productsErrorDetails}

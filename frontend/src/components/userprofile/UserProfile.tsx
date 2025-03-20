@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from "../../hooks/auth/useauth";
-import { useFavoriteStore } from '../../hooks/favorites/usefavorites';
-import { useOrderStore } from '../../hooks/orders/useorder';
+import { useFavorites } from '../../hooks/favorites/usefavorites';
+import { useOrders } from '../../hooks/orders/useorder';
 import { ProfileEditModal } from './ProfileEdit';
+import { Product, Order } from '../../utils/types';
 
 const UserProfilePage = () => {
   const navigate = useNavigate();
@@ -17,45 +18,16 @@ const UserProfilePage = () => {
  
   const {
     favorites,
-    fetchFavorites,
     isLoading: favoritesLoading
-  } = useFavoriteStore();
+  } = useFavorites();
  
   const {
     orders,
-    fetchOrders,
     isLoading: ordersLoading
-  } = useOrderStore();
+  } = useOrders();
  
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [dataFetched, setDataFetched] = useState(false);
- 
-  // Add state to track if we need to refresh user data (only after edit)
   const [shouldRefreshUser, setShouldRefreshUser] = useState(false);
-
-  // Only fetch favorites and orders once when user is authenticated and auth check is complete
-  useEffect(() => {
-    // Only proceed if auth has been checked, user is authenticated, and data hasn't been fetched yet
-    if (hasCheckedAuth && isAuthenticated && !dataFetched) {
-      const loadData = async () => {
-        try {
-          // Execute these in parallel but handle errors for each individually
-          const fetchPromises = [
-            fetchFavorites().catch(err => console.error("Error fetching favorites:", err)),
-            fetchOrders().catch(err => console.error("Error fetching orders:", err))
-          ];
-         
-          await Promise.all(fetchPromises);
-          setDataFetched(true);
-        } catch (error) {
-          console.error("Error loading profile data:", error);
-          setDataFetched(true); // Mark as fetched even on error to prevent infinite retries
-        }
-      };
-     
-      loadData();
-    }
-  }, [hasCheckedAuth, isAuthenticated, dataFetched, fetchFavorites, fetchOrders]);
 
   // Only refresh user data when modal is closed with shouldRefreshUser flag
   useEffect(() => {
@@ -77,24 +49,24 @@ const UserProfilePage = () => {
   // Handler for modal close to set refresh flag
   const handleModalClose = useCallback(() => {
     setIsEditModalOpen(false);
-    setShouldRefreshUser(true); // Set flag to refresh instead of calling directly
+    setShouldRefreshUser(true);
   }, []);
 
   const getActiveDietaryPreferences = useCallback(() => {
-    if (!user) return [];
+    if (!user?.dietary_preferences) return [];
     return [
-      user.is_vegetarian && 'Vegetarian',
-      user.is_vegan && 'Vegan',
-      user.is_pescatarian && 'Pescatarian',
-      user.is_flexitarian && 'Flexitarian',
-      user.is_paleo && 'Paleolithic',
-      user.is_ketogenic && 'Ketogenic',
-      user.is_halal && 'Halal',
-      user.is_kosher && 'Kosher',
-      user.is_fruitarian && 'Fruitarian',
-      user.is_gluten_free && 'Gluten-Free',
-      user.is_dairy_free && 'Dairy-free',
-      user.is_organic && 'Organic',
+      user.dietary_preferences.is_vegetarian && 'Vegetarian',
+      user.dietary_preferences.is_vegan && 'Vegan',
+      user.dietary_preferences.is_pescatarian && 'Pescatarian',
+      user.dietary_preferences.is_flexitarian && 'Flexitarian',
+      user.dietary_preferences.is_paleo && 'Paleolithic',
+      user.dietary_preferences.is_ketogenic && 'Ketogenic',
+      user.dietary_preferences.is_halal && 'Halal',
+      user.dietary_preferences.is_kosher && 'Kosher',
+      user.dietary_preferences.is_fruitarian && 'Fruitarian',
+      user.dietary_preferences.is_gluten_free && 'Gluten-Free',
+      user.dietary_preferences.is_dairy_free && 'Dairy-free',
+      user.dietary_preferences.is_organic && 'Organic',
     ].filter(Boolean);
   }, [user]);
 
@@ -222,7 +194,7 @@ const UserProfilePage = () => {
               <div className="text-center text-gray-500 text-sm sm:text-base py-2 sm:py-3">No favorite meals yet. Start adding your favorites!</div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-1 gap-2 sm:gap-3 max-h-60 sm:max-h-72 overflow-y-auto pr-1 sm:pr-2">
-                {favorites.map((meal) => (
+                {favorites.map((meal: Product) => (
                   <div
                     key={meal.id}
                     className="bg-white rounded-lg shadow-sm hover:shadow overflow-hidden flex transition"
@@ -253,10 +225,10 @@ const UserProfilePage = () => {
               <div className="text-center text-gray-500 text-sm sm:text-base py-2 sm:py-3">No recent orders yet. Palit na bai!</div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-1 gap-2 sm:gap-3 max-h-60 sm:max-h-72 overflow-y-auto pr-1 sm:pr-2">
-                {orders.map((order) => (
+                {orders.map((order: Order) => (
                   <div key={order.id} className="bg-white rounded-lg shadow-sm hover:shadow overflow-hidden p-3">
                     <div>
-                      <p className="text-xs sm:text-sm text-gray-500">Ordered on {new Date(order.created_at).toLocaleDateString()}</p>
+                      <p className="text-xs sm:text-sm text-gray-500">Ordered on {order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A'}</p>
                       <div className="mt-1 sm:mt-2">
                         <p className="text-xs sm:text-sm font-semibold">₱{Number(order.total_amount).toFixed(2)}</p>
                         <p className="text-xs text-gray-600 mt-0.5 sm:mt-1">{order.items.length} item{order.items.length !== 1 ? 's' : ''}</p>
@@ -289,19 +261,19 @@ const UserProfilePage = () => {
             email: user.email || '',
             phone_number: user.phone_number || '',
             profile_picture: user.profile_picture,
-            dietaryPreferences: {
-              is_vegetarian: user.is_vegetarian || false,
-              is_vegan: user.is_vegan || false,
-              is_pescatarian: user.is_pescatarian || false,
-              is_flexitarian: user.is_flexitarian || false,
-              is_paleo: user.is_paleo || false,
-              is_ketogenic: user.is_ketogenic || false,
-              is_halal: user.is_halal || false,
-              is_kosher: user.is_kosher || false,
-              is_fruitarian: user.is_fruitarian || false,
-              is_gluten_free: user.is_gluten_free || false,
-              is_dairy_free: user.is_dairy_free || false,
-              is_organic: user.is_organic || false,
+            dietaryPreferences: user.dietary_preferences || {
+              is_vegetarian: false,
+              is_vegan: false,
+              is_pescatarian: false,
+              is_flexitarian: false,
+              is_paleo: false,
+              is_ketogenic: false,
+              is_halal: false,
+              is_kosher: false,
+              is_fruitarian: false,
+              is_gluten_free: false,
+              is_dairy_free: false,
+              is_organic: false,
             },
           }}
         />

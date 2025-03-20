@@ -168,7 +168,7 @@ const Login = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                {isLoading ? 'Loading...' : 'Log in'}
+                {isLoading ? 'Signing in...' : 'Log in'}
               </motion.button>
             </motion.form>
            
