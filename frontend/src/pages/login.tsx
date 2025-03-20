@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { EyeIcon, EyeOffIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import LogoRed from '../components/ui/LogoRed';
@@ -12,17 +12,10 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
-  const { login, user, isLoading, error } = useAuthStore();
+  const { login, isLoading, error } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
  
-  useEffect(() => {
-    if (user) {
-      const from = (location.state as any)?.from?.pathname || '/home';
-      navigate(from, { replace: true });
-    }
-  }, [user, navigate, location]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -30,6 +23,8 @@ const Login = () => {
         throw new Error('Please fill in all fields');
       }
       await login({ email, password });
+      const from = location.state?.from?.pathname || '/home';
+      navigate(from, { replace: true });
     } catch (error: any) {
       console.error('Login failed:', error);
     }
@@ -184,7 +179,7 @@ const Login = () => {
                 initial="hidden"
                 animate="visible"
               >
-                {error.response?.data?.error || 'Login failed. Please try again.'}
+                {error?.message || 'Login failed. Please try again.'}
               </motion.p>
             )}
            

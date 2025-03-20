@@ -20,6 +20,9 @@ const Register = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      if (!username || !email || !password || !fullName) {
+        throw new Error('Please fill in all fields');
+      }
       await register({
         username,
         email,
@@ -32,7 +35,7 @@ const Register = () => {
       
       setIsExiting(true);
       setTimeout(() => {
-        navigate('/home');
+        navigate('/home', { replace: true });
       }, 300);
     } catch (err) {
       console.error("Registration failed:", err);

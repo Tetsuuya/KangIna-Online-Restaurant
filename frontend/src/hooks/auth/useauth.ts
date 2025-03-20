@@ -3,11 +3,6 @@ import { authService } from '../../api/auth/auth';
 import { AuthUser, RegisterData, DietaryPreferences } from '../../utils/types';
 import { ACCESS_TOKEN, REFRESH_TOKEN } from '../../api/constants';
 import { setFavoriteUserId, clearFavoriteStore } from '../favorites/usefavorites';
-import { AxiosError } from 'axios';
-
-interface ErrorResponse {
-  error: string;
-}
 
 export const useAuthStore = () => {
   const queryClient = useQueryClient();
@@ -113,7 +108,7 @@ export const useAuthStore = () => {
     isCheckingAuth,
     hasCheckedAuth: !isCheckingAuth,
     isAuthenticated: !!user,
-    error: (loginMutation.error || registerMutation.error || logoutMutation.error) as AxiosError<ErrorResponse> | null,
+    error: (loginMutation.error || registerMutation.error || logoutMutation.error) as Error | null,
     success: registerMutation.isSuccess,
     refreshUserData,
     
