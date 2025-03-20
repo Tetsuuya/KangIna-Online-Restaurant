@@ -1,9 +1,5 @@
-import api from './api';  // Import the shared API instance
-import { Product } from '../api/productApi';  // Adjust import path as needed
-
-export interface FavoriteToggleResponse {
-  status: string;
-}
+import api from './../api';  // Import the shared API instance
+import { Product, FavoriteToggleResponse } from '../../utils/types';
 
 export const favoriteApi = {
   /**

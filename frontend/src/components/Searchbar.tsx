@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
-
-interface SearchBarProps {
-  className?: string;
-  onSearch?: (query: string) => void;
-  initialValue?: string;
-}
+import { SearchBarProps } from '../utils/types';
 
 const SearchBar: React.FC<SearchBarProps> = ({
   className = "",

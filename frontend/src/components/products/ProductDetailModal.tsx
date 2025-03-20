@@ -1,24 +1,19 @@
 import React from 'react';
-import { Product } from '../../api/productApi';
-import { useFavoriteStore } from '../../store/StoreFavorites';
-import { useCartStore } from '../../store/CartStore';
-
-
-interface ProductDetailModalProps {
-  product: Product;
-  onClose: () => void;
-  onToggleFavorite: () => void;
-}
-
+import { ProductDetailModalProps } from '../../utils/types';
+import { useFavoriteStore } from '../../hooks/favorites/usefavorites';
+import { useCartStore } from '../../hooks/cart/usecart';
+import { useAuthStore } from '../../hooks/auth/useauth';
+import { useNavigate } from 'react-router-dom';
 
 export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   product,
   onClose,
   onToggleFavorite
 }) => {
+  const navigate = useNavigate();
   const { isFavorite } = useFavoriteStore();
   const { addItem, isLoading: isCartLoading } = useCartStore();
-
+  const { isAuthenticated } = useAuthStore();
 
   // Safe price formatting function
   const formatPrice = (price: number | string | undefined) => {
@@ -31,11 +26,19 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     return isNaN(numPrice) ? 'N/A' : `₱${numPrice.toFixed(2)}`;
   };
 
-
-  const handleAddToCart = () => {
-    addItem(product.id);
+  const handleAddToCart = async () => {
+    if (!isAuthenticated) {
+      // If not authenticated, redirect to login
+      navigate('/login');
+      return;
+    }
+    try {
+      await addItem(product.id);
+    } catch (error) {
+      // Error is already handled by the cart store
+      console.error('Error adding to cart:', error);
+    }
   };
-
 
   return (
     <>
@@ -44,7 +47,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         className="fixed inset-0 z-50"
         onClick={onClose}
       ></div>
-
 
       {/* Side Panel - use z-60 to be above the overlay */}
       <div className="fixed right-0 top-0 h-full w-96 bg-white rounded-lg shadow-2xl p-6 z-60 overflow-y-auto flex flex-col">
@@ -60,7 +62,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           <h2 className="text-2xl font-bold text-blue-900 break-words">{product.name}</h2>
         </div>
 
-
         {/* Description */}
         <div className="mb-4">
           <h3 className="font-semibold text-gray-700">Description</h3>
@@ -68,7 +69,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             {product.description || 'No description available'}
           </p>
         </div>
-
 
         {/* Product Image */}
         <div className="mb-4">
@@ -85,7 +85,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           )}
         </div>
 
-
         {/* Scrollable Content */}
         <div className="flex-grow overflow-y-auto pr-2">
           <div className="mb-4">
@@ -94,7 +93,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               {product.ingredients || 'No ingredients listed'}
             </p>
           </div>
-
 
           <div className="grid grid-cols-1 gap-2 mb-4">
             <div>
@@ -111,7 +109,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             </div>
           </div>
         </div>
-
 
         {/* Fixed Bottom Section */}
         <div className="sticky bottom-0 left-0 w-full bg-white pt-4 border-t">
@@ -139,7 +136,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 onClick={handleAddToCart}
                 disabled={isCartLoading}
               >
-                {isCartLoading ? 'Adding...' : 'Add to Cart'}
+                {isCartLoading ? 'Adding...' : isAuthenticated ? 'Add to Cart' : 'Login to Add'}
               </button>
             </div>
           </div>

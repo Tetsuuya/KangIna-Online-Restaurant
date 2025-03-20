@@ -1,21 +1,5 @@
-import api from './api';
-
-// Interfaces for TypeScript type safety
-export interface OrderItem {
-  id?: number;
-  product: number;
-  product_name: string;
-  quantity: number;
-  price: number;
-}
-
-export interface Order {
-  id?: number;
-  status: string;
-  created_at: string;
-  total_amount: number;
-  items: OrderItem[];
-}
+import api from './../api';
+import { Order } from '../../utils/types';
 
 export const orderApi = {
   createOrder: async () => {

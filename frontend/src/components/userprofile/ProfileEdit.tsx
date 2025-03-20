@@ -1,33 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import useAuthStore from "../../store/AuthStore";
+import { useAuthStore } from "../../hooks/auth/useauth";
 import { motion } from 'framer-motion';
-
-
-
-interface ProfileEditModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  initialData: {
-    full_name: string;
-    email: string;
-    phone_number: string;
-    profile_picture?: string;
-    dietaryPreferences: {
-      is_vegetarian: boolean;
-      is_vegan: boolean;
-      is_pescatarian: boolean;
-      is_flexitarian: boolean;
-      is_paleo: boolean;
-      is_ketogenic: boolean;
-      is_halal: boolean;
-      is_kosher: boolean;
-      is_fruitarian: boolean;
-      is_gluten_free: boolean;
-      is_dairy_free: boolean;
-      is_organic: boolean;
-    };
-  };
-}
+import { ProfileEditModalProps, DietaryPreferences } from '../../utils/types';
 
 const dietaryOptions = [
   { key: 'is_vegetarian', label: 'Vegetarian' },
@@ -245,7 +219,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
           </div>
 
           {updateError && <div className="mt-4 text-red-500 text-sm">{updateError}</div>}
-          {error && <div className="mt-4 text-red-500 text-sm">{error}</div>}
+          {error && <div className="mt-4 text-red-500 text-sm">{error instanceof Error ? error.message : String(error)}</div>}
 
           <div className="mt-6 flex justify-end">
             <button

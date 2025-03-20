@@ -1,18 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useCartStore } from '../../store/CartStore';
-import useAuthStore from '../../store/AuthStore';
-import { useOrderStore } from '../../store/StoreOrders';
-
-
-// Define interface for cart item  
-interface CartItem {
-  id: number;
-  product: number;
-  product_name: string;
-  product_price: number;
-  product_image?: string;
-  quantity: number;
-}
+import { useCartStore } from '../../hooks/cart/usecart';
+import { useAuthStore } from '../../hooks/auth/useauth';
+import { useOrderStore } from '../../hooks/orders/useorder';
+import { CartItem } from '../../utils/types';
 
 
 const RightSidebar = () => {
@@ -26,7 +16,7 @@ const RightSidebar = () => {
     // Get the user from authStore
     const { user } = useAuthStore();
    
-    // Using Zustand stores
+    // Using TanStack Query hooks
     const { items, isLoading, error, fetchCart, removeItem, updateQuantity, getTotalPrice } = useCartStore();
     const { createOrder, isLoading: isOrderLoading } = useOrderStore();
    
@@ -73,45 +63,47 @@ const RightSidebar = () => {
 
     // Cart item card component
     const CartItemCard = ({ item }: { item: CartItem }) => {
+        if (!item) return null;
+        
         return (
-            <div className="bg-white rounded-lg mb-3 overflow-hidden flex shadow-md">
+            <div className="bg-white rounded-lg mb-2 shadow-lg overflow-hidden flex border border-gray-100">
                 {/* Product image on the left side with fixed dimensions */}
-                <div className="w-16 h-auto bg-gray-100 flex-shrink-0 relative">
+                <div className="w-14 h-14 bg-gray-50 flex-shrink-0">
                     {item.product_image ? (
                         <img
                             src={item.product_image}
                             alt={item.product_name}
-                            className="w-full h-full object-cover absolute top-0 left-0 bottom-0 right-0"
+                            className="w-full h-full object-cover"
                         />
                     ) : (
-                        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                        <div className="w-full h-full bg-gray-50 flex items-center justify-center">
                             <span className="text-xs text-gray-400">No img</span>
                         </div>
                     )}
                 </div>
                
                 {/* Product details in the middle with text ellipsis */}
-                <div className="flex-grow p-3 min-w-0">
-                    <h4 className="font-medium text-gray-800 truncate" title={item.product_name}>
+                <div className="flex-grow p-2 min-w-0">
+                    <h4 className="font-medium text-sm text-gray-800 truncate" title={item.product_name}>
                         {item.product_name}
                     </h4>
-                    <div className="mt-1">
-                        <span className="text-sm text-gray-500">Php {item.product_price.toFixed(2)}</span>
+                    <div className="mt-0.5">
+                        <span className="text-xs text-gray-500">Php {Number(item.product_price || 0).toFixed(2)}</span>
                     </div>
                 </div>
                
                 {/* Quantity controls and delete button on the right */}
-                <div className="flex items-center pr-3 flex-shrink-0">
-                    <div className="flex items-center border border-gray-200 rounded-md overflow-hidden mr-2">
+                <div className="flex items-center p-1.5 flex-shrink-0">
+                    <div className="flex items-center border border-gray-200 rounded-md overflow-hidden mr-1.5">
                         <button
-                            className="bg-gray-100 hover:bg-gray-200 text-gray-600 w-6 h-6 flex items-center justify-center"
+                            className="bg-gray-50 hover:bg-gray-100 text-gray-600 w-5 h-5 flex items-center justify-center text-sm"
                             onClick={() => handleQuantityChange(item.product, item.quantity - 1)}
                         >
                             -
                         </button>
-                        <span className="px-2 text-sm font-medium text-gray-700">{item.quantity}</span>
+                        <span className="px-1.5 text-xs font-medium text-gray-700">{item.quantity}</span>
                         <button
-                            className="bg-gray-100 hover:bg-gray-200 text-gray-600 w-6 h-6 flex items-center justify-center"
+                            className="bg-gray-50 hover:bg-gray-100 text-gray-600 w-5 h-5 flex items-center justify-center text-sm"
                             onClick={() => handleQuantityChange(item.product, item.quantity + 1)}
                         >
                             +
@@ -123,7 +115,7 @@ const RightSidebar = () => {
                         onClick={() => removeItem(item.product)}
                         aria-label="Remove item"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                     </button>
@@ -151,7 +143,7 @@ const RightSidebar = () => {
 
             {/* Sidebar - Desktop and Mobile */}
             <div className={`
-                fixed inset-y-0 right-0 w-full md:w-[320px] bg-white h-full overflow-y-auto p-4 md:p-6 flex flex-col shadow-lg
+                fixed inset-y-0 right-0 w-full md:w-[320px] bg-white h-full overflow-hidden p-4 md:p-6 flex flex-col shadow-lg
                 transform transition-transform duration-300 ease-in-out
                 ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'}
                 md:translate-x-0 md:relative
@@ -168,26 +160,32 @@ const RightSidebar = () => {
                 </button>
 
 
-                <h2 className="text-2xl md:text-4xl font-extrabold text-indigo-900 mb-6 mt-10 md:mt-6">
-                    Kain na, {user?.username || 'User'}!
+                <h2 className="text-2xl md:text-4xl font-extrabold text-indigo-900 mb-4 mt-10 md:mt-6">
+                    Kain na, {user?.username || 'Guest'}!
                 </h2>
                 <hr className="border-t border-gray-300 my-2" />
                
                 {/* Cart items section */}
-                <div className="mb-4 flex-grow overflow-hidden flex flex-col">
-                    <h3 className="text-[#F58E26] mb-6 font-bold">Here's what's on your cart:</h3>
+                <div className="flex-grow flex flex-col min-h-0">
+                    <h3 className="text-[#F58E26] mb-4 font-bold text-sm">Here's what's on your cart:</h3>
                     {/* Scrollable cart container */}
-                    <div className="overflow-y-auto flex-grow pr-1">
-                        {isLoading ? (
-                            <p className="text-gray-500">Loading your cart...</p>
+                    <div className="overflow-y-auto flex-grow pr-1 -mr-1">
+                        {isLoading && items.length === 0 ? (
+                            <div className="flex items-center justify-center h-32">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F58E26]"></div>
+                            </div>
                         ) : error ? (
-                            <p className="text-red-500">Error loading cart: {error}</p>
+                            <div className="flex items-center justify-center h-32">
+                                <p className="text-red-500 text-sm">Error loading cart: {error}</p>
+                            </div>
                         ) : items.length === 0 ? (
-                            <p className="text-gray-500">Your cart is empty</p>
+                            <div className="flex items-center justify-center h-32">
+                                <p className="text-gray-500 text-sm">Your cart is empty</p>
+                            </div>
                         ) : (
-                            <div className="flex flex-col gap-2">
+                            <div className="flex flex-col gap-1.5">
                                 {items.map((item: CartItem) => (
-                                    <CartItemCard key={item.id} item={item} />
+                                    <CartItemCard key={item.product} item={item} />
                                 ))}
                             </div>
                         )}

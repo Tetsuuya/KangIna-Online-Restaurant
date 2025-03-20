@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom'; // Added for navigation
-import useAuthStore from '../../store/AuthStore';
+import { useAuthStore } from '../../hooks/auth/useauth';
 import useAppStore from '../../store/HomeUserStore';
 import LogoBlue from '../../components/ui/LogoBlue';
 import { X, Menu } from 'lucide-react';
@@ -20,8 +20,16 @@ const LeftSidebar: React.FC = () => {
     };
 
     const handleLogout = async () => {
-        await logout(); // Wait for logout to complete
-        navigate('/'); // Redirect to login page after logout
+        try {
+            // Close mobile menu if open
+            setIsMobileMenuOpen(false);
+            // Navigate to landing page first
+            navigate('/', { replace: true });
+            // Then perform logout
+            await logout();
+        } catch (error) {
+            console.error('Logout failed:', error);
+        }
     };
 
     return (

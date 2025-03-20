@@ -1,14 +1,8 @@
 import React, { useState } from 'react';
-import { Product } from '../../api/productApi';
-import { useCartStore } from '../../store/CartStore';
-import { useFavoriteStore } from '../../store/StoreFavorites';
+import { ProductCardProps } from '../../utils/types';
+import { useCartStore } from '../../hooks/cart/usecart';
+import { useFavoriteStore } from '../../hooks/favorites/usefavorites';
 import { ProductDetailModal } from './ProductDetailModal';
-
-
-interface ProductCardProps {
-  product: Product;
-}
-
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   // Using Zustand stores for cart and favorites management

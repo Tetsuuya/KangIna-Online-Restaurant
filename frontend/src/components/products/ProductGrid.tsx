@@ -1,13 +1,6 @@
 import React from 'react';
-import { Product } from '../../api/productApi';
+import { Product, ProductGridProps } from '../../utils/types';
 import { ProductCard } from './ProductCard';
-
-interface ProductGridProps {
-  products: Product[];
-  isLoading: boolean;
-  isError: boolean;
-  error?: Error | null;
-}
 
 export const ProductGrid: React.FC<ProductGridProps> = ({ products, isLoading, isError, error }) => {
   if (isLoading) {

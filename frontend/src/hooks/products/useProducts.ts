@@ -1,7 +1,8 @@
 // src/hooks/useProducts.ts
 import { useQuery } from '@tanstack/react-query';
-import { productApi, CategoryOption, Product } from '../api/productApi';
+import { productApi } from '../../api/products/productApi';
 import { useState, useEffect } from 'react';
+import { CategoryOption, Product } from '../../utils/types';
 
 export const useCategories = () => {
   return useQuery<CategoryOption[], Error>({

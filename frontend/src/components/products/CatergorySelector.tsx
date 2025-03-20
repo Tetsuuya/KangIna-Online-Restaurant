@@ -1,18 +1,10 @@
 import React from 'react';
-import { CategoryOption } from '../../api/productApi';
+import { CategorySelectorProps } from '../../utils/types';
 import image1 from '../../assets/categories/category1.png';
 import image2 from '../../assets/categories/category2.png';
 import image3 from '../../assets/categories/category3.png';    
 import image4 from '../../assets/categories/category4.png';
 import image5 from '../../assets/categories/category5.png';
-
-interface CategorySelectorProps {
-  categories: CategoryOption[];
-  selectedCategory: string;
-  onCategorySelect: (category: string) => void;
-  isLoading: boolean;
-  isError: boolean;
-}
 
 const categoryStyles: Record<string, { image: string; bgColor: string; textColor: string; borderColor: string }> = {
   ALL: { image: image1, bgColor: 'bg-white', textColor: 'text-black', borderColor: 'border-indigo-700' },

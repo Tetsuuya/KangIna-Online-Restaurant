@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import useAuthStore from "../../store/AuthStore";
-import { useFavoriteStore } from '../../store/StoreFavorites';
-import { useOrderStore } from '../../store/StoreOrders';
+import { useAuthStore } from "../../hooks/auth/useauth";
+import { useFavoriteStore } from '../../hooks/favorites/usefavorites';
+import { useOrderStore } from '../../hooks/orders/useorder';
 import { ProfileEditModal } from './ProfileEdit';
 
 const UserProfilePage = () => {
@@ -101,17 +101,40 @@ const UserProfilePage = () => {
   const activeDietary = getActiveDietaryPreferences();
 
   // Show loading state while checking authentication
-  if (!hasCheckedAuth || (profileLoading && !user)) {
-    return <div className="flex justify-center items-center h-screen">Loading profile...</div>;
+  if (!hasCheckedAuth || profileLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-2rem)]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ed3f25]"></div>
+        <p className="mt-4 text-gray-600">Loading profile...</p>
+      </div>
+    );
   }
 
   // Redirect to login if not authenticated
-  if (!isAuthenticated || (!user && !profileLoading)) {
+  if (!isAuthenticated) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen">
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-2rem)]">
         <h1 className="text-2xl font-bold mb-4">Please log in to view your profile</h1>
-        <button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" onClick={() => navigate('/login')}>
+        <button 
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          onClick={() => navigate('/login')}
+        >
           Go to Login
+        </button>
+      </div>
+    );
+  }
+
+  // If we have a user, show the profile
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-2rem)]">
+        <h1 className="text-2xl font-bold mb-4">Error loading profile</h1>
+        <button 
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          onClick={() => refreshUserData()}
+        >
+          Retry
         </button>
       </div>
     );
@@ -198,12 +221,11 @@ const UserProfilePage = () => {
             ) : favorites.length === 0 ? (
               <div className="text-center text-gray-500 text-sm sm:text-base py-2 sm:py-3">No favorite meals yet. Start adding your favorites!</div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-1 gap-2 sm:gap-3 max-h-60 sm:max-h-72 overflow-y-auto pr-1 sm:pr-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-1 gap-2 sm:gap-3 max-h-60 sm:max-h-72 overflow-y-auto pr-1 sm:pr-2">
                 {favorites.map((meal) => (
                   <div
                     key={meal.id}
-                    className="bg-white rounded-lg shadow-sm hover:shadow overflow-hidden flex cursor-pointer transition"
-                    onClick={() => navigate(`/product/${meal.id}`)}
+                    className="bg-white rounded-lg shadow-sm hover:shadow overflow-hidden flex transition"
                   >
                     <div className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0 overflow-hidden bg-gray-50">
                       {meal.image_url ? (
@@ -230,28 +252,26 @@ const UserProfilePage = () => {
             ) : orders.length === 0 ? (
               <div className="text-center text-gray-500 text-sm sm:text-base py-2 sm:py-3">No recent orders yet. Palit na bai!</div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-1 gap-2 max-h-60 sm:max-h-72 overflow-y-auto pr-1 sm:pr-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-1 gap-2 sm:gap-3 max-h-60 sm:max-h-72 overflow-y-auto pr-1 sm:pr-2">
                 {orders.map((order) => (
-                  <div key={order.id} className="bg-white rounded-lg shadow-sm hover:shadow overflow-hidden transition">
-                    <div className="p-2 sm:p-3">
-                      <div>
-                        <p className="text-xs sm:text-sm text-gray-500">Ordered on {new Date(order.created_at).toLocaleDateString()}</p>
-                        <div className="mt-1 sm:mt-2">
-                          <p className="text-xs sm:text-sm font-semibold">₱{Number(order.total_amount).toFixed(2)}</p>
-                          <p className="text-xs text-gray-600 mt-0.5 sm:mt-1">{order.items.length} item{order.items.length !== 1 ? 's' : ''}</p>
-                        </div>
-                        {order.items.length > 0 && (  
-                          <div className="mt-2 pt-2 border-t border-gray-100">
-                            <p className="text-xs sm:text-sm font-medium line-clamp-1">{order.items[0].product_name}</p>
-                            {order.items.length > 1 && (
-                              <p className="text-xs sm:text-sm font-medium line-clamp-1">{order.items[1].product_name}</p>
-                            )}
-                            {order.items.length > 2 && (
-                              <p className="text-xs text-gray-500 mt-0.5 sm:mt-1">See more</p>
-                            )}
-                          </div>
-                        )}
+                  <div key={order.id} className="bg-white rounded-lg shadow-sm hover:shadow overflow-hidden p-3">
+                    <div>
+                      <p className="text-xs sm:text-sm text-gray-500">Ordered on {new Date(order.created_at).toLocaleDateString()}</p>
+                      <div className="mt-1 sm:mt-2">
+                        <p className="text-xs sm:text-sm font-semibold">₱{Number(order.total_amount).toFixed(2)}</p>
+                        <p className="text-xs text-gray-600 mt-0.5 sm:mt-1">{order.items.length} item{order.items.length !== 1 ? 's' : ''}</p>
                       </div>
+                      {order.items.length > 0 && (  
+                        <div className="mt-2 pt-2 border-t border-gray-100">
+                          <p className="text-xs sm:text-sm font-medium line-clamp-1">{order.items[0].product_name}</p>
+                          {order.items.length > 1 && (
+                            <p className="text-xs sm:text-sm font-medium line-clamp-1">{order.items[1].product_name}</p>
+                          )}
+                          {order.items.length > 2 && (
+                            <p className="text-xs text-gray-500 mt-0.5 sm:mt-1">See more</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

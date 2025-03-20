@@ -3,29 +3,20 @@ import React, { useEffect, useState } from 'react';
 import LeftSidebar from '../components/Sidebar/LeftSidebar';
 import RightSidebar from '../components/Sidebar/RightSidebar';
 import useAppStore from '../store/HomeUserStore';
-import useAuthStore from '../store/AuthStore';
-import { useProducts } from '../hooks/useProducts';
+import { useProducts } from '../hooks/products/useProducts';
 import { CategorySelector } from '../components/products';
 import { ProductGrid } from '../components/products/ProductGrid';
 import SearchBar from '../components/Searchbar';
 import UserProfile from '../components/userprofile/UserProfile';
-import { Product } from '../api/productApi';
-
+import { Product } from '../utils/types';
+import { useAuthStore } from '../hooks/auth/useauth';
 
 const Home: React.FC = () => {
     const { activeSection } = useAppStore();
-    const { user, checkAuthStatus } = useAuthStore();
+    const { isAuthenticated } = useAuthStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
    
-    useEffect(() => {
-        // Ensure user data is loaded
-        if (!user) {
-            checkAuthStatus();
-        }
-    }, [user, checkAuthStatus]);
-
-
     const {
         categoriesQuery,
         productsQuery,
@@ -46,7 +37,6 @@ const Home: React.FC = () => {
         error: productsErrorDetails
     } = productsQuery;
 
-
     // Handle search functionality locally
     useEffect(() => {
         if (searchQuery.trim() === '') {
@@ -65,17 +55,14 @@ const Home: React.FC = () => {
         }
     }, [searchQuery, products]);
 
-
     const handleSearch = (query: string) => {
         setSearchQuery(query);
     };
-
 
     return (
         <div className="flex h-screen overflow-hidden">
             {/* Left Sidebar (responsive) */}
             <LeftSidebar />
-
 
             {/* Main Content Area (scrollable) */}
             <div className="flex-1 overflow-y-auto relative">
@@ -114,22 +101,29 @@ const Home: React.FC = () => {
                                 error={productsErrorDetails}
                             />
                         </>
-                    ) : activeSection === 'profile' ? (
+                    ) : activeSection === 'profile' && isAuthenticated ? (
                         <UserProfile />
+                    ) : activeSection === 'profile' ? (
+                        <div className="flex flex-col items-center justify-center h-[calc(100vh-2rem)]">
+                            <h1 className="text-2xl font-bold mb-4">Please log in to view your profile</h1>
+                            <button 
+                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                onClick={() => window.location.href = '/login'}
+                            >
+                                Go to Login
+                            </button>
+                        </div>
                     ) : (
-                        // Default fallback, should not happen with current store
                         <div className="p-4">Content not available</div>
                     )}
                 </div>
             </div>
-
 
             {/* Right Sidebar (responsive) */}
             <RightSidebar />
         </div>
     );
 };
-
 
 export default Home;
 
