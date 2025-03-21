@@ -31,6 +31,11 @@ export const useAuthStore = () => {
     }
   });
 
+  const login = async (credentials: { email: string; password: string }) => {
+    const result = await loginMutation.mutateAsync(credentials);
+    return result;
+  };
+
   const registerMutation = useMutation({
     mutationFn: (data: RegisterData) => authService.register(data),
     onSuccess: (data) => {
@@ -44,6 +49,11 @@ export const useAuthStore = () => {
       window.alert('Registration successful!');
     }
   });
+
+  const register = async (data: RegisterData) => {
+    const result = await registerMutation.mutateAsync(data);
+    return result;
+  };
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -62,6 +72,11 @@ export const useAuthStore = () => {
       queryClient.resetQueries();
     }
   });
+
+  const logout = async () => {
+    const result = await logoutMutation.mutateAsync();
+    return result;
+  };
 
   const updateProfileMutation = useMutation({
     mutationFn: (data: Partial<AuthUser>) => authService.updateProfile(data),
@@ -85,6 +100,11 @@ export const useAuthStore = () => {
     }
   });
 
+  const updateProfile = async (data: Partial<AuthUser>) => {
+    const result = await updateProfileMutation.mutateAsync(data);
+    return result;
+  };
+
   const updateProfilePictureMutation = useMutation({
     mutationFn: (file: File) => authService.updateProfilePicture(file),
     onSuccess: (updatedUser) => {
@@ -92,6 +112,11 @@ export const useAuthStore = () => {
       window.alert('Profile picture updated successfully');
     }
   });
+
+  const updateProfilePicture = async (file: File) => {
+    const result = await updateProfilePictureMutation.mutateAsync(file);
+    return result;
+  };
 
   const updateDietaryPreferencesMutation = useMutation({
     mutationFn: (data: Partial<DietaryPreferences>) => authService.updateDietaryPreferences(data),
@@ -116,19 +141,23 @@ export const useAuthStore = () => {
     }
   });
 
+  const updateDietaryPreferences = async (data: Partial<DietaryPreferences>) => {
+    const result = await updateDietaryPreferencesMutation.mutateAsync(data);
+    return result;
+  };
+
   return {
     user: userData,
-    isCheckingAuth,
-    error: null,
     isAuthenticated,
     hasCheckedAuth,
-    isLoading: loginMutation.isPending || registerMutation.isPending,
-    login: ({ email, password }: { email: string; password: string }) => loginMutation.mutate({ email, password }),
-    register: (data: RegisterData) => registerMutation.mutate(data),
-    logout: () => logoutMutation.mutate(),
-    updateProfile: (data: Partial<AuthUser>) => updateProfileMutation.mutate(data),
-    updateProfilePicture: (file: File) => updateProfilePictureMutation.mutate(file),
-    updateDietaryPreferences: (data: Partial<DietaryPreferences>) => updateDietaryPreferencesMutation.mutate(data),
+    isLoading: loginMutation.isPending,
+    error: loginMutation.error,
+    login,
+    register,
+    logout,
+    updateProfile,
+    updateProfilePicture,
+    updateDietaryPreferences,
     refreshUserData
   };
 };
