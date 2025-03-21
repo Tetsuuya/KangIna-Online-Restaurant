@@ -1,5 +1,4 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import LandingPage from './pages/Landingpage/LandingPage';
 import Home from './pages/Home';
 import Login from './pages/login';
@@ -7,17 +6,7 @@ import Register from './pages/Register';
 import PrivateRoute from './components/PrivateRoute';
 import { useAuthStore } from './hooks/auth/useauth';
 
-// Create a client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      retry: 1,
-    },
-  },
-});
-
-function AppContent() {
+function App() {
   const { isCheckingAuth, isAuthenticated } = useAuthStore();
   
   // Show loading state while checking authentication
@@ -43,14 +32,6 @@ function AppContent() {
         <Route path="/register" element={<Register />} />
       </Routes>
     </Router>
-  );
-}
-
-function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <AppContent />
-    </QueryClientProvider>
   );
 }
 
