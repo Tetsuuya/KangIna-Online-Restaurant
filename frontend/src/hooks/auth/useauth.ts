@@ -6,114 +6,129 @@ import { ACCESS_TOKEN, REFRESH_TOKEN } from '../../api/constants';
 export const useAuthStore = () => {
   const queryClient = useQueryClient();
 
-  // Query for user data
-  const { data: user, isLoading: isCheckingAuth, refetch: refreshUserData } = useQuery({
+  const {data: userData, isLoading: isCheckingAuth, refetch: refreshUserData} = useQuery({
     queryKey: ['user'],
-    queryFn: () => authService.getCurrentUser().then(res => res.data),
+    queryFn: authService.getCurrentUser,
     enabled: !!localStorage.getItem(ACCESS_TOKEN),
     retry: false,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
   });
 
-  // Auth mutations
+  const isAuthenticated = !!userData;
+  const hasCheckedAuth = !isCheckingAuth;
+
   const loginMutation = useMutation({
     mutationFn: ({ email, password }: { email: string; password: string }) => 
-      authService.login(email, password).then(res => res.data),
+      authService.login(email, password),
     onSuccess: (data) => {
       localStorage.setItem(ACCESS_TOKEN, data.access);
       localStorage.setItem(REFRESH_TOKEN, data.refresh);
       queryClient.setQueryData(['user'], data.user);
-      queryClient.invalidateQueries({ queryKey: ['favorites'] });
-    },
+      queryClient.prefetchQuery({ queryKey: ['favorites'] });
+      queryClient.prefetchQuery({ queryKey: ['cart'] });
+    }
   });
 
   const registerMutation = useMutation({
-    mutationFn: (data: RegisterData) => 
-      authService.register(data).then(res => res.data),
+    mutationFn: (data: RegisterData) => authService.register(data),
     onSuccess: (data) => {
       localStorage.setItem(ACCESS_TOKEN, data.access);
       localStorage.setItem(REFRESH_TOKEN, data.refresh);
-      
-      if (data.user?.id) {
-        queryClient.invalidateQueries({ queryKey: ['favorites', data.user.id] });
-      }
       queryClient.setQueryData(['user'], data.user);
-    },
-    onError(error) {
-      console.error("Register Error:", error);
-    },
+      if (data.user?.id) {
+        queryClient.prefetchQuery({ queryKey: ['favorites'] });
+        queryClient.prefetchQuery({ queryKey: ['cart'] });
+      }
+      window.alert('Registration successful!');
+    }
   });
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
       const refreshToken = localStorage.getItem(REFRESH_TOKEN);
-      if (!refreshToken) return Promise.resolve({ data: null, status: 200 });
-      return authService.logout(refreshToken);
+      if (refreshToken) {
+        await authService.logout(refreshToken);
+      }
     },
-    onSettled: () => {
+    onMutate: async () => {
+      await queryClient.cancelQueries();
+      queryClient.clear();
       localStorage.removeItem(ACCESS_TOKEN);
       localStorage.removeItem(REFRESH_TOKEN);
-      queryClient.setQueryData(['favorites'], []);
-      queryClient.setQueryData(['cart'], []);
-      queryClient.setQueryData(['user'], null);
-      queryClient.invalidateQueries();
     },
-    onError(error) {
-      console.error("Logout Error:", error);
-    },
+    onSettled: () => {
+      queryClient.resetQueries();
+    }
   });
 
-  // Profile mutations
   const updateProfileMutation = useMutation({
-    mutationFn: (data: Partial<AuthUser>) => 
-      authService.updateProfile(data).then(res => res.data),
+    mutationFn: (data: Partial<AuthUser>) => authService.updateProfile(data),
+    onMutate: async (newData) => {
+      await queryClient.cancelQueries({ queryKey: ['user'] });
+      const previousUser = queryClient.getQueryData<AuthUser>(['user']);
+      if (previousUser) {
+        queryClient.setQueryData(['user'], { ...previousUser, ...newData });
+      }
+      return { previousUser };
+    },
     onSuccess: (updatedUser) => {
       queryClient.setQueryData(['user'], updatedUser);
+      window.alert('Profile updated successfully');
     },
-    onError(error) {
-      console.error("Update Profile Error:", error);
-    },
+    onError: (_, __, context) => {
+      if (context?.previousUser) {
+        queryClient.setQueryData(['user'], context.previousUser);
+      }
+      window.alert('Failed to update profile');
+    }
   });
 
   const updateProfilePictureMutation = useMutation({
-    mutationFn: (file: File) => 
-      authService.updateProfilePicture(file).then(res => res.data),
+    mutationFn: (file: File) => authService.updateProfilePicture(file),
     onSuccess: (updatedUser) => {
       queryClient.setQueryData(['user'], updatedUser);
-    },
-    onError(error) {
-      console.error("Update Profile Picture Error:", error);
-    },
+      window.alert('Profile picture updated successfully');
+    }
   });
 
   const updateDietaryPreferencesMutation = useMutation({
-    mutationFn: (data: Partial<DietaryPreferences>) => 
-      authService.updateDietaryPreferences(data).then(res => res.data),
+    mutationFn: (data: Partial<DietaryPreferences>) => authService.updateDietaryPreferences(data),
+    onMutate: async (newData) => {
+      await queryClient.cancelQueries({ queryKey: ['user'] });
+      const previousUser = queryClient.getQueryData<AuthUser>(['user']);
+      if (previousUser) {
+        queryClient.setQueryData(['user'], { ...previousUser, ...newData });
+      }
+      return { previousUser };
+    },
     onSuccess: (updatedUser) => {
       queryClient.setQueryData(['user'], updatedUser);
+      queryClient.invalidateQueries({ queryKey: ['user'] });
+      window.alert('Profile updated successfully');
     },
-    onError(error) {
-      console.error("Update Dietary Preferences Error:", error);
-    },
+    onError: (_, __, context) => {
+      if (context?.previousUser) {
+        queryClient.setQueryData(['user'], context.previousUser);
+      }
+      window.alert('Failed to update profile');
+    }
   });
 
   return {
-    user: user || null,
-    isLoading: isCheckingAuth || loginMutation.isPending || registerMutation.isPending || logoutMutation.isPending,
+    user: userData,
     isCheckingAuth,
-    hasCheckedAuth: !isCheckingAuth,
-    isAuthenticated: !!user,
-    error: (loginMutation.error || registerMutation.error || logoutMutation.error) as Error | null,
-    success: registerMutation.isSuccess,
-    refreshUserData,
-    
-    // Auth actions
-    login: loginMutation.mutateAsync,
-    register: registerMutation.mutateAsync,
-    logout: logoutMutation.mutateAsync,
-    
-    // Profile actions
-    updateProfile: updateProfileMutation.mutateAsync,
-    updateProfilePicture: updateProfilePictureMutation.mutateAsync,
-    updateDietaryPreferences: updateDietaryPreferencesMutation.mutateAsync,
+    error: null,
+    isAuthenticated,
+    hasCheckedAuth,
+    isLoading: loginMutation.isPending || registerMutation.isPending,
+    login: ({ email, password }: { email: string; password: string }) => loginMutation.mutate({ email, password }),
+    register: (data: RegisterData) => registerMutation.mutate(data),
+    logout: () => logoutMutation.mutate(),
+    updateProfile: (data: Partial<AuthUser>) => updateProfileMutation.mutate(data),
+    updateProfilePicture: (file: File) => updateProfilePictureMutation.mutate(file),
+    updateDietaryPreferences: (data: Partial<DietaryPreferences>) => updateDietaryPreferencesMutation.mutate(data),
+    refreshUserData
   };
 };

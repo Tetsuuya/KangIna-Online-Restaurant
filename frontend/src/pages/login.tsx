@@ -179,7 +179,7 @@ const Login = () => {
                 initial="hidden"
                 animate="visible"
               >
-                {error?.message || 'Login failed. Please try again.'}
+                {(error as Error)?.message || 'Login failed. Please try again.'}
               </motion.p>
             )}
            
@@ -235,5 +235,3 @@ const Login = () => {
 };
 
 export default Login;
-
-  

@@ -2,47 +2,64 @@ import { useState, useCallback, memo, useMemo, useRef, useEffect } from 'react';
 import { useCart } from '../../hooks/cart/usecart';
 import { useAuthStore } from '../../hooks/auth/useauth';
 import { useOrders } from '../../hooks/orders/useorder';
+import { useProducts } from '../../hooks/products/useProducts';
 import { CartItem, Product } from '../../utils/types';
-import { toast } from 'sonner';
 
 // Memoized Cart Item Card Component
 const CartItemCard = memo(({ 
     item, 
     onQuantityChange, 
     onRemove,
-    product 
+    product,
+    onLocalQuantityChange 
 }: { 
     item: CartItem; 
     onQuantityChange: (id: number, quantity: number) => void;
     onRemove: (id: number) => void;
     product: Product;
+    onLocalQuantityChange: (id: number, quantity: number) => void;
 }) => {
     const [localQuantity, setLocalQuantity] = useState(item.quantity);
-    const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const lastUpdateRef = useRef<number>(item.quantity);
+
+    const handleQuantityChange = (newQuantity: number) => {
+        setLocalQuantity(newQuantity);
+        onLocalQuantityChange(item.product, newQuantity);
+    };
 
     // Update server after delay
     useEffect(() => {
-        if (localQuantity === item.quantity) return;
+        if (localQuantity === lastUpdateRef.current) return;
 
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
         }
 
         timeoutRef.current = setTimeout(() => {
+            lastUpdateRef.current = localQuantity;
             onQuantityChange(item.product, localQuantity);
-        }, 1000); // Wait 1 second after last change
+        }, 1000);
 
         return () => {
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
             }
         };
-    }, [localQuantity, item.quantity, item.product, onQuantityChange]);
+    }, [localQuantity, item.product, onQuantityChange]);
+
+    // Reset local quantity if server item quantity changes
+    useEffect(() => {
+        if (item.quantity !== lastUpdateRef.current) {
+            setLocalQuantity(item.quantity);
+            lastUpdateRef.current = item.quantity;
+        }
+    }, [item.quantity]);
 
     if (!item || !product) return null;
     
     return (
-        <div className="bg-white rounded-lg mb-2 shadow-lg overflow-hidden flex border border-gray-100">
+        <div className="bg-white rounded-lg mb-2 shadow-lg overflow-hidden flex border border-gray-100" data-product-id={item.product}>
             {/* Product image */}
             <div className="w-14 h-14 bg-gray-50 flex-shrink-0">
                 {product.image_url ? (
@@ -82,15 +99,15 @@ const CartItemCard = memo(({
                 <div className="flex items-center border border-gray-200 rounded-md overflow-hidden mr-1.5">
                     <button
                         className="bg-gray-50 hover:bg-gray-100 text-gray-600 w-5 h-5 flex items-center justify-center text-sm disabled:opacity-50"
-                        onClick={() => setLocalQuantity(Math.max(1, localQuantity - 1))}
+                        onClick={() => handleQuantityChange(Math.max(1, localQuantity - 1))}
                         disabled={localQuantity <= 1}
                     >
                         -
                     </button>
-                    <span className="px-1.5 text-xs font-medium text-gray-700">{localQuantity}</span>
+                    <span className="px-1.5 text-xs font-medium text-gray-700" data-local-quantity>{localQuantity}</span>
                     <button
                         className="bg-gray-50 hover:bg-gray-100 text-gray-600 w-5 h-5 flex items-center justify-center text-sm"
-                        onClick={() => setLocalQuantity(localQuantity + 1)}
+                        onClick={() => handleQuantityChange(localQuantity + 1)}
                     >
                         +
                     </button>
@@ -114,71 +131,103 @@ CartItemCard.displayName = 'CartItemCard';
 
 const RightSidebar = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('cash');
+    const [localQuantities, setLocalQuantities] = useState<Record<number, number>>({});
+    const [isProcessing, setIsProcessing] = useState(false);
     const { user, isAuthenticated } = useAuthStore();
-    const { items, isLoading, removeItem, updateQuantity, getTotalPrice, products: productsMap } = useCart();
-    const { createOrder, isLoading: isOrderLoading } = useOrders();
 
-    // Memoize handlers to prevent unnecessary re-renders
+    const { items, isLoading, removeItem, updateQuantity } = useCart();
+    const { products } = useProducts();
+    const { createOrder } = useOrders();
+
+    // Handle local quantity changes
+    const handleLocalQuantityChange = useCallback((productId: number, quantity: number) => {
+        setLocalQuantities(prev => ({
+            ...prev,
+            [productId]: quantity
+        }));
+    }, []);
+
+    // Memoize calculations with local quantities
+    const { currentTotal, taxAmount, totalAmount } = useMemo(() => {
+        const subtotal = items?.reduce((total, item) => {
+            const quantity = localQuantities[item.product] ?? item.quantity;
+            return total + (item.product_price * quantity);
+        }, 0) || 0;
+
+        const tax = subtotal * 0.05;
+        return {
+            currentTotal: subtotal,
+            taxAmount: tax,
+            totalAmount: subtotal + tax
+        };
+    }, [items, localQuantities]);
+
+    // Handle quantity change
     const handleQuantityChange = useCallback(async (productId: number, newQuantity: number) => {
         try {
             await updateQuantity(productId, newQuantity);
         } catch (error) {
-            toast.error('Failed to update quantity');
+            window.alert('Failed to update quantity');
         }
     }, [updateQuantity]);
 
+    // Handle remove item
     const handleRemoveItem = useCallback(async (productId: number) => {
         try {
             await removeItem(productId);
         } catch (error) {
-            toast.error('Failed to remove item');
+            window.alert('Failed to remove item');
         }
     }, [removeItem]);
 
-    const toggleSidebar = useCallback(() => {
-        setIsSidebarOpen(prev => !prev);
-    }, []);
-
+    // Handle place order
     const handlePlaceOrder = useCallback(async () => {
-        if (!selectedPaymentMethod) {
-            toast.error('Please select a payment method');
+        if (!isAuthenticated) {
+            window.alert('Please log in to place an order');
             return;
         }
 
         if (!items || items.length === 0) {
-            toast.error('Your cart is empty');
+            window.alert('Your cart is empty');
             return;
         }
         
         try {
-            await createOrder();
-            toast.success('Order placed successfully!');
-            setSelectedPaymentMethod(null);
+            setIsProcessing(true);
+            await createOrder(); 
+            setIsProcessing(false);
+            setIsSidebarOpen(false);
         } catch (error) {
-            toast.error('Failed to place order. Please try again.');
+            setIsProcessing(false);
+            window.alert('Failed to place order. Please try again.');
         }
-    }, [createOrder, selectedPaymentMethod, items]);
-
-    // Memoize calculations
-    const taxRate = 0.05;
-    const taxAmount = useMemo(() => getTotalPrice() * taxRate, [getTotalPrice]);
-    const totalAmount = useMemo(() => getTotalPrice() + taxAmount, [getTotalPrice, taxAmount]);
+    }, [createOrder, items, isAuthenticated]);
 
     // Memoize cart items rendering
     const cartItems = useMemo(() => (
         <div className="flex flex-col gap-1.5">
-            {items?.map((item: CartItem) => (
-                <CartItemCard 
-                    key={item.product} 
-                    item={item}
-                    product={productsMap[item.product]}
-                    onQuantityChange={handleQuantityChange}
-                    onRemove={handleRemoveItem}
-                />
-            ))}
+            {items?.map((item: CartItem) => {
+                const product = products.find(p => p.id === item.product);
+                if (!product) return null;
+                
+                return (
+                    <CartItemCard 
+                        key={item.product} 
+                        item={item}
+                        product={product}
+                        onQuantityChange={handleQuantityChange}
+                        onRemove={handleRemoveItem}
+                        onLocalQuantityChange={handleLocalQuantityChange}
+                    />
+                );
+            })}
         </div>
-    ), [items, productsMap, handleQuantityChange, handleRemoveItem]);
+    ), [items, products, handleQuantityChange, handleRemoveItem, handleLocalQuantityChange]);
+
+    const toggleSidebar = useCallback(() => {
+        setIsSidebarOpen(prev => !prev);
+    }, []);
 
     return (
         <>
@@ -188,7 +237,7 @@ const RightSidebar = () => {
                 className="fixed bottom-4 right-4 z-50 bg-indigo-800 text-white p-3 rounded-full shadow-lg block md:hidden"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                 </svg>
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                     {items?.length || 0}
@@ -240,7 +289,7 @@ const RightSidebar = () => {
                     <div className="bg-gray-100 rounded-lg p-4 mb-4">
                         <div className="flex justify-between mb-2">
                             <span className="text-gray-600">Sub Total</span>
-                            <span className="font-medium">Php {getTotalPrice().toFixed(2)}</span>
+                            <span className="font-medium">Php {currentTotal.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between mb-2">
                             <span className="text-gray-600">Tax 5%</span>
@@ -252,7 +301,7 @@ const RightSidebar = () => {
                         </div>
                     </div>
 
-                    {/* Payment Options */}
+                    {/* Payment Options - Just aesthetic UI with no functionality */}
                     <div className="grid grid-cols-3 gap-4 mb-4">
                         {['cash', 'card', 'qr'].map((method) => (
                             <div key={method} className="flex flex-col items-center">
@@ -263,6 +312,7 @@ const RightSidebar = () => {
                                         : 'bg-white border border-gray-300'
                                     }`}
                                     onClick={() => setSelectedPaymentMethod(method)}
+                                    type="button"
                                 >
                                     {method === 'cash' && (
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -276,7 +326,7 @@ const RightSidebar = () => {
                                     )}
                                     {method === 'qr' && (
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                                         </svg>
                                     )}
                                 </button>
@@ -291,9 +341,10 @@ const RightSidebar = () => {
                     <button
                         className="w-full bg-[#ED3F25] text-white py-3 rounded-full font-semibold hover:bg-[#c41f06] transition disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={handlePlaceOrder}
-                        disabled={!isAuthenticated || !items || items.length === 0 || isOrderLoading}
+                        disabled={!isAuthenticated || !items || items.length === 0 || isProcessing}
+                        type="button"
                     >
-                        {isOrderLoading ? 'Processing...' : 'Place Order'}
+                        {isProcessing ? 'Processing...' : 'Place Order'}
                     </button>
                 </div>
             </div>
@@ -309,5 +360,4 @@ const RightSidebar = () => {
     );
 };
 
-export default memo(RightSidebar);
-
+export default RightSidebar;

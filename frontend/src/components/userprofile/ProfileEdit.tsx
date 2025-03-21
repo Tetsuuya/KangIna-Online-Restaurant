@@ -19,28 +19,28 @@ const dietaryOptions = [
 ];
 
 export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose, initialData }) => {
-  const { updateProfile, updateDietaryPreferences, updateProfilePicture, refreshUserData, isLoading, error } = useAuthStore();
+  const { updateProfile, updateDietaryPreferences, updateProfilePicture, refreshUserData } = useAuthStore();
   const [formData, setFormData] = useState({
-    full_name: initialData.full_name,
-    email: initialData.email,
-    phone_number: initialData.phone_number,
+    full_name: initialData?.full_name || '',
+    email: initialData?.email || '',
+    phone_number: initialData?.phone_number || '',
   });
-  const [dietaryPreferences, setDietaryPreferences] = useState(initialData.dietaryPreferences);
-  const [previewImage, setPreviewImage] = useState<string | undefined>(initialData.profile_picture);
+  const [dietaryPreferences, setDietaryPreferences] = useState<DietaryPreferences>(initialData?.dietaryPreferences || {});
+  const [previewImage, setPreviewImage] = useState<string | undefined>(initialData?.profile_picture);
   const [updateLoading, setUpdateLoading] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && initialData) {
       setFormData({
-        full_name: initialData.full_name,
-        email: initialData.email,
-        phone_number: initialData.phone_number,
+        full_name: initialData.full_name || '',
+        email: initialData.email || '',
+        phone_number: initialData.phone_number || '',
       });
       setPreviewImage(initialData.profile_picture);
-      setDietaryPreferences(initialData.dietaryPreferences);
+      setDietaryPreferences(initialData.dietaryPreferences || {});
       setUpdateError(null);
       setErrors({});
       setNewImageFile(null);
@@ -49,27 +49,27 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-    if (errors[name]) setErrors({ ...errors, [name]: '' });
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
   const handleDietaryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = e.target;
-    setDietaryPreferences((prev) => ({ ...prev, [name]: checked }));
+    setDietaryPreferences(prev => ({ ...prev, [name]: checked }));
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      
-      // Store the file for later upload on form submission
+      if (file.size > 5 * 1024 * 1024) {
+        setUpdateError('Image size should be less than 5MB');
+        return;
+      }
       setNewImageFile(file);
-      
-      // Show a local preview
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
-          setPreviewImage(event.target?.result as string);
+          setPreviewImage(event.target.result as string);
         }
       };
       reader.readAsDataURL(file);
@@ -94,25 +94,19 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
     setUpdateError(null);
 
     try {
-      // Only upload the image if a new file was selected
       if (newImageFile) {
-        const imageUrl = await updateProfilePicture(newImageFile);
-        console.log('Received image URL after upload:', imageUrl);
+        await updateProfilePicture(newImageFile);
       }
-      
-      // Update the profile basic info
+
       await updateProfile({
         full_name: formData.full_name,
         email: formData.email,
         phone_number: formData.phone_number,
       });
-      
-      // Update dietary preferences
+
       await updateDietaryPreferences(dietaryPreferences);
-      
-      // Refresh user data from server to ensure everything is in sync
+      window.alert('Profile updated successfully');
       await refreshUserData();
-      
       onClose();
     } catch (err) {
       console.error('Profile update error:', err);
@@ -123,8 +117,6 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
   };
 
   if (!isOpen) return null;
-
-  
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[9999]">
@@ -208,7 +200,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
                   <input
                     type="checkbox"
                     name={option.key}
-                    checked={dietaryPreferences[option.key as keyof typeof dietaryPreferences]}
+                    checked={dietaryPreferences[option.key as keyof DietaryPreferences] || false}
                     onChange={handleDietaryChange}
                     className="accent-[#32347C]"
                   />
@@ -219,15 +211,14 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
           </div>
 
           {updateError && <div className="mt-4 text-red-500 text-sm">{updateError}</div>}
-          {error && <div className="mt-4 text-red-500 text-sm">{error instanceof Error ? error.message : String(error)}</div>}
 
           <div className="mt-6 flex justify-end">
             <button
               type="submit"
-              disabled={updateLoading || isLoading}
+              disabled={updateLoading}
               className="bg-[#32347C] text-white px-5 py-2 rounded-full hover:bg-[#21215C] transition disabled:opacity-70"
             >
-              {updateLoading || isLoading ? 'Saving...' : 'Save'}
+              {updateLoading ? 'Saving...' : 'Save'}
             </button>
           </div>
         </form>

@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createOrder, getOrders } from '../../api/orders/orders';
-import { toast } from 'sonner';
 import { useAuthStore } from '../auth/useauth';
 
 export const useOrders = () => {
@@ -16,16 +15,21 @@ export const useOrders = () => {
 
   const createOrderMutation = useMutation({
     mutationFn: createOrder,
-    onSuccess: (newOrder) => {
-      queryClient.setQueryData(['orders'], (old: typeof orders = []) => [newOrder, ...old]);
-      toast.success('Order created successfully');
+    onSuccess: () => {
+      window.alert('Order successful');
+      // Force refetch all necessary queries to ensure everything updates
+      queryClient.refetchQueries({ queryKey: ['cart'] });
+      queryClient.refetchQueries({ queryKey: ['products'] });
+      queryClient.refetchQueries({ queryKey: ['orders'] });
     },
-    onError: () => toast.error('Failed to create order'),
+    onError: () => {
+      window.alert('Failed to place order');
+    },
   });
 
   const handleCreateOrder = async () => {
     if (!isAuthenticated) {
-      toast.error('Please log in to create an order');
+      window.alert('Please log in to place an order');
       return;
     }
     await createOrderMutation.mutateAsync();

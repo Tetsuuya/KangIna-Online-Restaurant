@@ -1,169 +1,94 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getCartItems, addToCart, removeFromCart, updateCartItemQuantity } from '../../api/cart/cartApi';
-import { toast } from 'sonner';
-import { useAuthStore } from '../auth/useauth';
-import { CartItem, Product } from '../../utils/types';
-import { useProducts } from '../products/useProducts';
-import { useMemo } from 'react';
-
-interface CartContext {
-  previousCart: CartItem[] | undefined;
-}
+import { CartItem } from '../../utils/types';
 
 export const useCart = () => {
   const queryClient = useQueryClient();
-  const { isAuthenticated } = useAuthStore();
-  const { products } = useProducts();
 
-  // Optimize query with better caching and stale time
   const { data: items = [], isLoading } = useQuery<CartItem[]>({
     queryKey: ['cart'],
-    queryFn: async () => {
-      const data = await getCartItems();
-      return data;
-    },
-    enabled: isAuthenticated,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 30, // 30 minutes
-    refetchOnWindowFocus: false, // Prevent refetch on window focus
+    queryFn: getCartItems,
+    staleTime: 1000 * 60, // Cache for 1 minute
   });
 
-  // Memoize products map to prevent unnecessary recalculations
-  const productsMap = useMemo(() => {
-    return products.reduce((acc, product) => {
-      acc[product.id] = product;
-      return acc;
-    }, {} as Record<number, Product>);
-  }, [products]);
-
-  // Memoize total calculations
-  const { totalItems, totalPrice } = useMemo(() => {
-    const itemsTotal = items.reduce((total: number, item: CartItem) => total + item.quantity, 0);
-    const priceTotal = items.reduce((total: number, item: CartItem) => total + (item.product_price * item.quantity), 0);
-    return { totalItems: itemsTotal, totalPrice: priceTotal };
-  }, [items]);
-
-  // Optimize mutations with optimistic updates
-  const addItemMutation = useMutation<CartItem, Error, { productId: number; quantity: number }, CartContext>({
+  const addItemMutation = useMutation<CartItem, Error, { productId: number; quantity: number }, { previousCart: CartItem[] }>({
     mutationFn: ({ productId, quantity }) => addToCart(productId, quantity),
     onMutate: async ({ productId, quantity }) => {
       await queryClient.cancelQueries({ queryKey: ['cart'] });
-      const previousCart = queryClient.getQueryData<CartItem[]>(['cart']);
+      const previousCart = queryClient.getQueryData<CartItem[]>(['cart']) || [];
       
-      const newItem: CartItem = {
-        id: Date.now(), // Temporary ID
-        product: productId,
-        quantity,
-        product_price: productsMap[productId]?.price || 0,
-        product_name: productsMap[productId]?.name || '',
-      };
+      const newCart = [...previousCart];
+      const existingItem = newCart.find(item => item.product === productId);
 
-      queryClient.setQueryData<CartItem[]>(['cart'], old => {
-        if (!old) return [newItem];
-        const existingItem = old.find(item => item.product === productId);
-        if (existingItem) {
-          return old.map(item =>
-            item.product === productId
-              ? { ...item, quantity: item.quantity + quantity }
-              : item
-          );
-        }
-        return [...old, newItem];
-      });
+      if (existingItem) {
+        existingItem.quantity += quantity;
+      } else {
+        newCart.push({
+          id: Date.now(),
+          product: productId,
+          quantity,
+          product_name: '',  // Will be updated after server response
+          product_price: 0
+        });
+      }
 
+      queryClient.setQueryData<CartItem[]>(['cart'], newCart);
       return { previousCart };
     },
-    onError: (err, _newTodo, context) => {
+    onError: (_, __, context) => {
       if (context?.previousCart) {
-        queryClient.setQueryData(['cart'], context.previousCart);
+        queryClient.setQueryData<CartItem[]>(['cart'], context.previousCart);
       }
-      toast.error(err.message || 'Failed to add item to cart');
-    },
-    onSuccess: () => {
-      toast.success('Item added to cart');
-    },
+      window.alert('Failed to add item to cart');
+    }
   });
 
-  const removeItemMutation = useMutation<void, Error, number, CartContext>({
+  const removeItemMutation = useMutation<void, Error, number, { previousCart: CartItem[] }>({
     mutationFn: removeFromCart,
     onMutate: async (productId) => {
       await queryClient.cancelQueries({ queryKey: ['cart'] });
-      const previousCart = queryClient.getQueryData<CartItem[]>(['cart']);
-      queryClient.setQueryData<CartItem[]>(['cart'], old => 
-        old?.filter(item => item.product !== productId) || []
-      );
+      const previousCart = queryClient.getQueryData<CartItem[]>(['cart']) || [];
+      const newCart = previousCart.filter((item: CartItem) => item.product !== productId);
+      queryClient.setQueryData<CartItem[]>(['cart'], newCart);
       return { previousCart };
     },
-    onError: (err, _productId, context) => {
+    onError: (_, __, context) => {
       if (context?.previousCart) {
-        queryClient.setQueryData(['cart'], context.previousCart);
+        queryClient.setQueryData<CartItem[]>(['cart'], context.previousCart);
       }
-      toast.error(err.message || 'Failed to remove item');
-    },
-    onSuccess: () => {
-      toast.success('Item removed from cart');
-    },
+      window.alert('Failed to remove item');
+    }
   });
 
-  const updateQuantityMutation = useMutation<CartItem, Error, { productId: number; quantity: number }>({
+  const updateQuantityMutation = useMutation<CartItem, Error, { productId: number; quantity: number }, { previousCart: CartItem[] }>({
     mutationFn: ({ productId, quantity }) => updateCartItemQuantity(productId, quantity),
-    onSuccess: () => {
-      // Refetch cart data to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ['cart'] });
+    onMutate: async ({ productId, quantity }) => {
+      await queryClient.cancelQueries({ queryKey: ['cart'] });
+      const previousCart = queryClient.getQueryData<CartItem[]>(['cart']) || [];
+      const newCart = previousCart.map((item: CartItem) =>
+        item.product === productId ? { ...item, quantity } : item
+      );
+      queryClient.setQueryData<CartItem[]>(['cart'], newCart);
+      return { previousCart };
     },
-    onError: (err) => {
-      toast.error(err.message || 'Failed to update cart');
+    onError: (_, __, context) => {
+      if (context?.previousCart) {
+        queryClient.setQueryData<CartItem[]>(['cart'], context.previousCart);
+      }
+      window.alert('Failed to update quantity');
     }
   });
 
-  const addItem = async (productId: number, quantity = 1) => {
-    if (!isAuthenticated) {
-      toast.error('Please log in to add items to cart');
-      return;
-    }
-    try {
-      await addItemMutation.mutateAsync({ productId, quantity });
-    } catch (error) {
-      // Error is handled by mutation
-    }
-  };
-
-  const removeItem = async (productId: number) => {
-    if (!isAuthenticated) {
-      toast.error('Please log in to remove items');
-      return;
-    }
-    try {
-      await removeItemMutation.mutateAsync(productId);
-    } catch (error) {
-      // Error is handled by mutation
-    }
-  };
-
-  const updateQuantity = async (productId: number, quantity: number) => {
-    if (!isAuthenticated) {
-      toast.error('Please log in to update cart');
-      return;
-    }
-    try {
-      if (quantity <= 0) {
-        await removeItem(productId);
-      } else {
-        await updateQuantityMutation.mutateAsync({ productId, quantity });
-      }
-    } catch (error) {
-      // Error is handled by mutation
-    }
-  };
+  const totalItems = items.reduce((total, item) => total + item.quantity, 0);
+  const totalPrice = items.reduce((total, item) => total + (item.product_price * item.quantity), 0);
 
   return {
     items,
-    products: productsMap,
     isLoading,
-    addItem,
-    removeItem,
-    updateQuantity,
-    getTotalItems: () => totalItems,
-    getTotalPrice: () => totalPrice,
+    totalItems,
+    totalPrice,
+    addItem: (productId: number, quantity: number) => addItemMutation.mutate({ productId, quantity }),
+    removeItem: (productId: number) => removeItemMutation.mutate(productId),
+    updateQuantity: (productId: number, quantity: number) => updateQuantityMutation.mutate({ productId, quantity })
   };
 };
