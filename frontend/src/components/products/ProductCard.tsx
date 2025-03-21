@@ -17,7 +17,7 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({ product }) => {
  
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
-    addItem(product.id);
+    addItem(product.id, 1);
   };
  
   const handleToggleFavorite = (e: React.MouseEvent) => {
@@ -117,5 +117,3 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({ product }) => {
     </>
   );
 });
-
-

@@ -40,6 +40,9 @@ export const useCart = () => {
         queryClient.setQueryData<CartItem[]>(['cart'], context.previousCart);
       }
       window.alert('Failed to add item to cart');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
     }
   });
 
@@ -57,6 +60,9 @@ export const useCart = () => {
         queryClient.setQueryData<CartItem[]>(['cart'], context.previousCart);
       }
       window.alert('Failed to remove item');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
     }
   });
 
@@ -76,6 +82,9 @@ export const useCart = () => {
         queryClient.setQueryData<CartItem[]>(['cart'], context.previousCart);
       }
       window.alert('Failed to update quantity');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
     }
   });
 
