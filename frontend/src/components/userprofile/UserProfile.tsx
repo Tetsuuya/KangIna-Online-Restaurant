@@ -29,15 +29,12 @@ const UserProfilePage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [shouldRefreshUser, setShouldRefreshUser] = useState(false);
 
-  // Only refresh user data when modal is closed with shouldRefreshUser flag
   useEffect(() => {
     if (shouldRefreshUser && isAuthenticated) {
       const doRefresh = async () => {
         try {
           await refreshUserData();
         } catch (error) {
-          console.error("Error refreshing user data:", error);
-        } finally {
           setShouldRefreshUser(false);
         }
       };
@@ -46,29 +43,36 @@ const UserProfilePage = () => {
     }
   }, [shouldRefreshUser, refreshUserData, isAuthenticated]);
 
-  // Handler for modal close to set refresh flag
   const handleModalClose = useCallback(() => {
     setIsEditModalOpen(false);
     setShouldRefreshUser(true);
   }, []);
 
-  const getActiveDietaryPreferences = useCallback(() => {
-    if (!user?.dietary_preferences) return [];
-    return [
-      user.dietary_preferences.is_vegetarian && 'Vegetarian',
-      user.dietary_preferences.is_vegan && 'Vegan',
-      user.dietary_preferences.is_pescatarian && 'Pescatarian',
-      user.dietary_preferences.is_flexitarian && 'Flexitarian',
-      user.dietary_preferences.is_paleo && 'Paleolithic',
-      user.dietary_preferences.is_ketogenic && 'Ketogenic',
-      user.dietary_preferences.is_halal && 'Halal',
-      user.dietary_preferences.is_kosher && 'Kosher',
-      user.dietary_preferences.is_fruitarian && 'Fruitarian',
-      user.dietary_preferences.is_gluten_free && 'Gluten-Free',
-      user.dietary_preferences.is_dairy_free && 'Dairy-free',
-      user.dietary_preferences.is_organic && 'Organic',
-    ].filter(Boolean);
-  }, [user]);
+  const getActiveDietaryPreferences = () => {
+    if (!user) return [];
+
+    const dietaryMap = {
+      is_vegetarian: 'Vegetarian',
+      is_vegan: 'Vegan',
+      is_pescatarian: 'Pescatarian',
+      is_flexitarian: 'Flexitarian',
+      is_paleo: 'Paleolithic',
+      is_ketogenic: 'Ketogenic',
+      is_halal: 'Halal',
+      is_kosher: 'Kosher',
+      is_fruitarian: 'Fruitarian',
+      is_gluten_free: 'Gluten-Free',
+      is_dairy_free: 'Dairy-free',
+      is_organic: 'Organic'
+    };
+
+    return Object.entries(dietaryMap)
+      .filter(([key]) => {
+        const value = user[key as keyof typeof user];
+        return typeof value === 'boolean' && value === true;
+      })
+      .map(([_, label]) => label);
+  };
 
   const activeDietary = getActiveDietaryPreferences();
 
@@ -112,17 +116,12 @@ const UserProfilePage = () => {
     );
   }
 
-  // Get the profile picture URL with cache-busting only if needed
+  // Get the profile picture URL
   const getProfilePicture = () => {
     if (!user?.profile_picture) return null;
-   
-    // Check if the URL already includes the domain
-    if (user.profile_picture.startsWith('http')) {
-      return user.profile_picture;
-    } else {
-      // If it's just a path, add the Cloudinary domain
-      return `http://res.cloudinary.com/dlp4jsibt/${user.profile_picture}`;
-    }
+    return user.profile_picture.startsWith('http') 
+      ? user.profile_picture 
+      : `http://res.cloudinary.com/dlp4jsibt/${user.profile_picture}`;
   };
 
   const profilePictureUrl = getProfilePicture();
@@ -140,20 +139,14 @@ const UserProfilePage = () => {
           <div className="p-4 sm:p-6 flex flex-col md:flex-row items-center md:items-start gap-4 sm:gap-6">
             <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-gray-200 flex items-center justify-center text-2xl sm:text-3xl text-gray-500 overflow-hidden">
             {profilePictureUrl ? (
-              <>
-                <img
-                  src={profilePictureUrl}
-                  alt={user?.username?.charAt(0).toUpperCase() || ''}
-                  className="h-full w-full object-cover rounded-full"
-                  onLoad={() => console.log('Image loaded successfully:', profilePictureUrl)}
-                  onError={(e) => {
-                    console.error("Profile image failed to load:", profilePictureUrl);
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-                {/* Fallback for debugging */}
-                <div className="hidden">{profilePictureUrl}</div>
-              </>
+              <img
+                src={profilePictureUrl}
+                alt={user?.username?.charAt(0).toUpperCase() || ''}
+                className="h-full w-full object-cover rounded-full"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
             ) : (
               user?.full_name ?
                 user.full_name.charAt(0).toUpperCase() :

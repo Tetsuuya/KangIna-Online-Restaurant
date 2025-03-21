@@ -12,7 +12,7 @@ export interface AuthUser extends BaseEntity {
     phone_number?: string;
     profile_picture?: string;
     date_joined?: string;
-    dietary_preferences: DietaryPreferences;
+    dietary_preferences?: DietaryPreferences;
 }
 
 export interface RegisterData {

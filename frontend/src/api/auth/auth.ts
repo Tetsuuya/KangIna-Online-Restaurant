@@ -18,7 +18,7 @@ export const authService = {
 
   async login(email: string, password: string) {
     try {
-      const { data } = await api.post<{ access: string; refresh: string; user: AuthUser }>('login/', {
+      const { data } = await api.post<{ access: string; refresh: string; user: AuthUser }>('/login/', {
         email: email.toLowerCase().trim(),
         password
       });
@@ -50,7 +50,6 @@ export const authService = {
     try {
       await api.post('/logout/', { refresh: refreshToken });
     } catch (error: any) {
-      console.error('Logout error:', error);
       throw new Error(error.response?.data?.message || 'Logout failed');
     }
   },
@@ -79,20 +78,15 @@ export const authService = {
       });
       return data;
     } catch (error: any) {
-      console.error('Profile picture update error:', error);
       throw new Error(error.response?.data?.message || 'Failed to update profile picture');
     }
   },
 
   async updateDietaryPreferences(data: Partial<DietaryPreferences>) {
     try {
-      const { data: responseData } = await api.put<AuthUser>('/profile/dietary-preferences/', data);
-      if (!responseData) {
-        throw new Error('No response data received');
-      }
+      const { data: responseData } = await api.put<AuthUser>('profile/dietary-preferences/', data);
       return responseData;
     } catch (error: any) {
-      console.error('Dietary preferences update error:', error);
       throw new Error(error.response?.data?.message || 'Failed to update dietary preferences');
     }
   }

@@ -1,115 +1,80 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { authService } from '../../api/auth/auth';
 import { AuthUser, RegisterData, DietaryPreferences } from '../../utils/types';
+import { authService } from '../../api/auth/auth';
 import { ACCESS_TOKEN, REFRESH_TOKEN } from '../../api/constants';
 
 export const useAuthStore = () => {
   const queryClient = useQueryClient();
 
-  const {data: userData, isLoading: isCheckingAuth, refetch: refreshUserData} = useQuery({
+  const { data: user, isLoading: isCheckingAuth } = useQuery<AuthUser | null>({
     queryKey: ['user'],
     queryFn: authService.getCurrentUser,
-    enabled: !!localStorage.getItem(ACCESS_TOKEN),
     retry: false,
+    refetchOnWindowFocus: false,
+    enabled: !!localStorage.getItem(ACCESS_TOKEN),
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
-    refetchOnWindowFocus: false,
   });
 
-  const isAuthenticated = !!userData;
+  const isAuthenticated = !!user;
   const hasCheckedAuth = !isCheckingAuth;
 
-  const loginMutation = useMutation({
-    mutationFn: ({ email, password }: { email: string; password: string }) => 
-      authService.login(email, password),
-    onSuccess: (data) => {
-      localStorage.setItem(ACCESS_TOKEN, data.access);
-      localStorage.setItem(REFRESH_TOKEN, data.refresh);
-      queryClient.setQueryData(['user'], data.user);
+  const login = useMutation({
+    mutationFn: async ({ email, password }: { email: string; password: string }) => {
+      const result = await authService.login(email, password);
+      localStorage.setItem(ACCESS_TOKEN, result.access);
+      localStorage.setItem(REFRESH_TOKEN, result.refresh);
+      return result.user;
+    },
+    onSuccess: (data: AuthUser) => {
+      queryClient.setQueryData(['user'], data);
       queryClient.prefetchQuery({ queryKey: ['favorites'] });
       queryClient.prefetchQuery({ queryKey: ['cart'] });
     }
   });
 
-  const login = async (credentials: { email: string; password: string }) => {
-    const result = await loginMutation.mutateAsync(credentials);
-    return result;
-  };
-
-  const registerMutation = useMutation({
-    mutationFn: (data: RegisterData) => authService.register(data),
-    onSuccess: (data) => {
-      localStorage.setItem(ACCESS_TOKEN, data.access);
-      localStorage.setItem(REFRESH_TOKEN, data.refresh);
-      queryClient.setQueryData(['user'], data.user);
-      if (data.user?.id) {
+  const register = useMutation({
+    mutationFn: async (data: RegisterData) => {
+      const result = await authService.register(data);
+      localStorage.setItem(ACCESS_TOKEN, result.access);
+      localStorage.setItem(REFRESH_TOKEN, result.refresh);
+      return result.user;
+    },
+    onSuccess: (data: AuthUser) => {
+      queryClient.setQueryData(['user'], data);
+      if (data.id) {
         queryClient.prefetchQuery({ queryKey: ['favorites'] });
         queryClient.prefetchQuery({ queryKey: ['cart'] });
       }
-      window.alert('Registration successful!');
     }
   });
 
-  const register = async (data: RegisterData) => {
-    const result = await registerMutation.mutateAsync(data);
-    return result;
-  };
-
-  const logoutMutation = useMutation({
+  const logout = useMutation({
     mutationFn: async () => {
       const refreshToken = localStorage.getItem(REFRESH_TOKEN);
       if (refreshToken) {
         await authService.logout(refreshToken);
       }
-    },
-    onMutate: async () => {
-      await queryClient.cancelQueries();
-      queryClient.clear();
       localStorage.removeItem(ACCESS_TOKEN);
       localStorage.removeItem(REFRESH_TOKEN);
     },
-    onSettled: () => {
-      queryClient.resetQueries();
+    onSuccess: () => {
+      queryClient.setQueryData(['user'], null);
+      queryClient.clear();
     }
   });
 
-  const logout = async () => {
-    const result = await logoutMutation.mutateAsync();
-    return result;
-  };
-
-  const updateProfileMutation = useMutation({
+  const updateProfile = useMutation({
     mutationFn: (data: Partial<AuthUser>) => authService.updateProfile(data),
-    onMutate: async (newData) => {
-      await queryClient.cancelQueries({ queryKey: ['user'] });
-      const previousUser = queryClient.getQueryData<AuthUser>(['user']);
-      if (previousUser) {
-        queryClient.setQueryData(['user'], { ...previousUser, ...newData });
-      }
-      return { previousUser };
-    },
-    onSuccess: (updatedUser) => {
-      queryClient.setQueryData(['user'], updatedUser);
-      window.alert('Profile updated successfully');
-    },
-    onError: (_, __, context) => {
-      if (context?.previousUser) {
-        queryClient.setQueryData(['user'], context.previousUser);
-      }
-      window.alert('Failed to update profile');
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user'] });
     }
   });
-
-  const updateProfile = async (data: Partial<AuthUser>) => {
-    const result = await updateProfileMutation.mutateAsync(data);
-    return result;
-  };
 
   const updateProfilePictureMutation = useMutation({
     mutationFn: (file: File) => authService.updateProfilePicture(file),
-    onSuccess: (updatedUser) => {
-      queryClient.setQueryData(['user'], updatedUser);
-      window.alert('Profile picture updated successfully');
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user'] });
     }
   });
 
@@ -118,46 +83,52 @@ export const useAuthStore = () => {
     return result;
   };
 
-  const updateDietaryPreferencesMutation = useMutation({
-    mutationFn: (data: Partial<DietaryPreferences>) => authService.updateDietaryPreferences(data),
+  const updateDietaryPreferences = useMutation({
+    mutationFn: async (data: Partial<DietaryPreferences>) => {
+      const result = await authService.updateDietaryPreferences(data);
+      return result;
+    },
     onMutate: async (newData) => {
       await queryClient.cancelQueries({ queryKey: ['user'] });
-      const previousUser = queryClient.getQueryData<AuthUser>(['user']);
-      if (previousUser) {
-        queryClient.setQueryData(['user'], { ...previousUser, ...newData });
-      }
+      const previousUser = queryClient.getQueryData(['user']);
+      queryClient.setQueryData(['user'], (oldData: AuthUser | null) => oldData ? {
+        ...oldData,
+        ...newData
+      } : null);
       return { previousUser };
     },
-    onSuccess: (updatedUser) => {
-      queryClient.setQueryData(['user'], updatedUser);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user'] });
-      window.alert('Profile updated successfully');
     },
     onError: (_, __, context) => {
       if (context?.previousUser) {
         queryClient.setQueryData(['user'], context.previousUser);
       }
-      window.alert('Failed to update profile');
     }
   });
 
-  const updateDietaryPreferences = async (data: Partial<DietaryPreferences>) => {
-    const result = await updateDietaryPreferencesMutation.mutateAsync(data);
+  const updateDietaryPreferencesAsync = async (data: Partial<DietaryPreferences>) => {
+    const result = await updateDietaryPreferences.mutateAsync(data);
     return result;
   };
 
+  const refreshUserDataAsync = async () => {
+    const data = await authService.getCurrentUser();
+    queryClient.setQueryData(['user'], data);
+  };
+
   return {
-    user: userData,
+    user,
     isAuthenticated,
     hasCheckedAuth,
-    isLoading: loginMutation.isPending,
-    error: loginMutation.error,
-    login,
-    register,
-    logout,
-    updateProfile,
+    isLoading: login.isPending || register.isPending || logout.isPending,
+    error: login.error || register.error || logout.error,
+    login: login.mutateAsync,
+    register: register.mutateAsync,
+    logout: logout.mutateAsync,
+    updateProfile: updateProfile.mutateAsync,
     updateProfilePicture,
-    updateDietaryPreferences,
-    refreshUserData
+    updateDietaryPreferences: updateDietaryPreferencesAsync,
+    refreshUserData: refreshUserDataAsync
   };
 };

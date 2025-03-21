@@ -18,6 +18,21 @@ const dietaryOptions = [
   { key: 'is_organic', label: 'Organic' },
 ];
 
+const defaultDietaryPreferences: DietaryPreferences = {
+  is_vegetarian: false,
+  is_vegan: false,
+  is_pescatarian: false,
+  is_flexitarian: false,
+  is_paleo: false,
+  is_ketogenic: false,
+  is_halal: false,
+  is_kosher: false,
+  is_fruitarian: false,
+  is_gluten_free: false,
+  is_dairy_free: false,
+  is_organic: false
+};
+
 export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose, initialData }) => {
   const { updateProfile, updateDietaryPreferences, updateProfilePicture, refreshUserData } = useAuthStore();
   const [formData, setFormData] = useState({
@@ -25,7 +40,10 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
     email: initialData?.email || '',
     phone_number: initialData?.phone_number || '',
   });
-  const [dietaryPreferences, setDietaryPreferences] = useState<DietaryPreferences>(initialData?.dietaryPreferences || {});
+  const [dietaryPreferences, setDietaryPreferences] = useState<DietaryPreferences>({
+    ...defaultDietaryPreferences,
+    ...(initialData?.dietaryPreferences || {})
+  });
   const [previewImage, setPreviewImage] = useState<string | undefined>(initialData?.profile_picture);
   const [updateLoading, setUpdateLoading] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
@@ -33,14 +51,30 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
 
   useEffect(() => {
-    if (isOpen && initialData) {
+    if (isOpen) {
       setFormData({
         full_name: initialData.full_name || '',
         email: initialData.email || '',
         phone_number: initialData.phone_number || '',
       });
       setPreviewImage(initialData.profile_picture);
-      setDietaryPreferences(initialData.dietaryPreferences || {});
+
+      const currentPreferences: DietaryPreferences = {
+        is_vegetarian: initialData.dietaryPreferences?.is_vegetarian || false,
+        is_vegan: initialData.dietaryPreferences?.is_vegan || false,
+        is_pescatarian: initialData.dietaryPreferences?.is_pescatarian || false,
+        is_flexitarian: initialData.dietaryPreferences?.is_flexitarian || false,
+        is_paleo: initialData.dietaryPreferences?.is_paleo || false,
+        is_ketogenic: initialData.dietaryPreferences?.is_ketogenic || false,
+        is_halal: initialData.dietaryPreferences?.is_halal || false,
+        is_kosher: initialData.dietaryPreferences?.is_kosher || false,
+        is_fruitarian: initialData.dietaryPreferences?.is_fruitarian || false,
+        is_gluten_free: initialData.dietaryPreferences?.is_gluten_free || false,
+        is_dairy_free: initialData.dietaryPreferences?.is_dairy_free || false,
+        is_organic: initialData.dietaryPreferences?.is_organic || false
+      };
+      
+      setDietaryPreferences(currentPreferences);
       setUpdateError(null);
       setErrors({});
       setNewImageFile(null);
@@ -105,11 +139,9 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
       });
 
       await updateDietaryPreferences(dietaryPreferences);
-      window.alert('Profile updated successfully');
       await refreshUserData();
       onClose();
     } catch (err) {
-      console.error('Profile update error:', err);
       setUpdateError(err instanceof Error ? err.message : 'Failed to update profile');
     } finally {
       setUpdateLoading(false);
@@ -142,7 +174,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
                   <div className="w-full h-full flex items-center justify-center text-gray-500">No Image</div>
                 )}
               </div>
-              <label className="bg-[#32347C] text-white px-4 sm:px-6 py-2 rounded hover:bg-[#21215C] transition cursor-pointer text-sm sm:text-base">
+              <label className="bg-[#32347C] text-white px-4 sm:px-6 py-2 rounded-full hover:bg-[#21215C] transition cursor-pointer text-sm sm:text-base">
                 Upload Image
                 <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
               </label>
