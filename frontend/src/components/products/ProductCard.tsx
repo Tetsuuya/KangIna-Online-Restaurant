@@ -25,16 +25,14 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({ product }) => {
     toggleFavorite(product.id);
   };
 
-  const handleViewDetails = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleViewDetails = () => {
     setShowDetails(true);
   };
  
   return (
     <>
       <div
-        className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 w-full h-80 flex flex-col cursor-pointer group"
-        onClick={() => setShowDetails(true)}
+        className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 w-full h-80 flex flex-col group"
       >
         {/* Image container with fixed height */}
         <div className="relative w-full h-40 overflow-hidden mx-auto mt-4 px-4">

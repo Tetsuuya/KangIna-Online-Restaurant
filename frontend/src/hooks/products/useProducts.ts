@@ -1,45 +1,18 @@
 // src/hooks/useProducts.ts
-import { useQuery } from '@tanstack/react-query';
 import { useState, useCallback, useMemo } from 'react';
-import api from '../../api/api';
-import { Product, CategoryOption } from '../../utils/types';
-
-const defaultCategories: CategoryOption[] = [
-  { value: 'ALL', label: 'All Items' },
-  { value: 'AGAHAN', label: 'Agahan' },
-  { value: 'TANGHALIAN', label: 'Tanghalian' },
-  { value: 'HAPUNAN', label: 'Hapunan' },
-  { value: 'MERIENDA', label: 'Merienda' }
-];
+import { useQueryProducts } from './useQueryProducts';
 
 export const useProducts = () => {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Categories query - using default categories since backend doesn't have categories endpoint yet
-  const { data: categories = defaultCategories } = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => Promise.resolve(defaultCategories),
-    staleTime: Infinity, // Never goes stale since these are static categories
-  });
-
-  // Fetch all products
-  const { data: allProducts = [], isLoading: isProductsLoading, isError, error } = useQuery({
-    queryKey: ['products'],
-    queryFn: async () => {
-      try {
-        const { data } = await api.get<Product[]>('/products/');
-        return data.map(product => ({
-          ...product,
-          category: product.category.toUpperCase() // Normalize category to uppercase
-        }));
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        return [];
-      }
-    },
-    staleTime: 2 * 60 * 1000, // 2 minutes
-  });
+  
+  const { categoriesQuery, productsQuery } = useQueryProducts();
+  
+  const categories = categoriesQuery.data || [];
+  const allProducts = productsQuery.data || [];
+  const isProductsLoading = productsQuery.isLoading;
+  const isError = productsQuery.isError;
+  const error = productsQuery.error;
 
   // Filter products based on search and category
   const filteredProducts = useMemo(() => {

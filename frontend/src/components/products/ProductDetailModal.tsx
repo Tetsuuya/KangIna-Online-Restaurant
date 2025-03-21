@@ -33,7 +33,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       return;
     }
     try {
-      await addItem(product.id);
+      await addItem(product.id, 1);
     } catch (error) {
       // Error is already handled by the cart store
       console.error('Error adding to cart:', error);
