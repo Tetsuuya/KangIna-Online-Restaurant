@@ -1,4 +1,4 @@
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { EyeIcon, EyeOffIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -6,6 +6,7 @@ import LogoRed from '../components/ui/LogoRed';
 import FoodRed1 from "../assets/FoodRed1.png";
 import Food1 from "../assets/Food1.png"
 import { useAuthStore } from '../hooks/auth/useauth';
+import { ACCESS_TOKEN } from '../api/constants';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -14,15 +15,15 @@ const Login = () => {
   const [isExiting, setIsExiting] = useState(false);
   const { login, isLoading, error, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
-  const location = useLocation();
 
+  // Check authentication status on mount and changes
   useEffect(() => {
-    if (isAuthenticated) {
-      const from = location.state?.from?.pathname || '/home';
-      navigate(from, { replace: true });
+    const token = localStorage.getItem(ACCESS_TOKEN);
+    if (token && isAuthenticated && !isLoading) {
+      navigate('/home', { replace: true });
     }
-  }, [isAuthenticated, navigate, location]);
- 
+  }, [isAuthenticated, isLoading, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -30,7 +31,10 @@ const Login = () => {
       return;
     }
     try {
-      await login({ email, password });
+      const result = await login({ email, password });
+      if (result) {
+        navigate('/home', { replace: true });
+      }
     } catch (error: any) {
       console.error('Login failed:', error);
     }

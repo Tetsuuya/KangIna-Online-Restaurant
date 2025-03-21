@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Added for navigation
 import { useAuthStore } from '../../hooks/auth/useauth';
 import useAppStore from '../../store/HomeUserStore';
 import LogoBlue from '../../components/ui/LogoBlue';
 import { X, Menu } from 'lucide-react';
 
 const LeftSidebar: React.FC = () => {
-    const navigate = useNavigate(); // For navigation after logout
     const { logout } = useAuthStore();
     const [activeButton, setActiveButton] = useState<'home' | 'profile'>('home');
     
@@ -23,10 +21,9 @@ const LeftSidebar: React.FC = () => {
         try {
             // Close mobile menu if open
             setIsMobileMenuOpen(false);
-            // Navigate to landing page first
-            navigate('/', { replace: true });
-            // Then perform logout
+            // Perform logout
             await logout();
+            // Navigation will be handled by the logout mutation's onSuccess
         } catch (error) {
             console.error('Logout failed:', error);
         }

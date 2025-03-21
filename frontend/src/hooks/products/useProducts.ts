@@ -16,19 +16,11 @@ export const useProducts = () => {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Categories query
-  const { data: categories = defaultCategories, isLoading: isCategoriesLoading } = useQuery({
+  // Categories query - using default categories since backend doesn't have categories endpoint yet
+  const { data: categories = defaultCategories } = useQuery({
     queryKey: ['categories'],
-    queryFn: async () => {
-      try {
-        const { data } = await api.get<CategoryOption[]>('/products/categories/');
-        return data.length > 0 ? data : defaultCategories;
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-        return defaultCategories;
-      }
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryFn: () => Promise.resolve(defaultCategories),
+    staleTime: Infinity, // Never goes stale since these are static categories
   });
 
   // Fetch all products
@@ -37,7 +29,10 @@ export const useProducts = () => {
     queryFn: async () => {
       try {
         const { data } = await api.get<Product[]>('/products/');
-        return data;
+        return data.map(product => ({
+          ...product,
+          category: product.category.toUpperCase() // Normalize category to uppercase
+        }));
       } catch (error) {
         console.error('Error fetching products:', error);
         return [];
@@ -85,7 +80,7 @@ export const useProducts = () => {
     products: filteredProducts,
     selectedCategory,
     searchQuery,
-    isLoading: isCategoriesLoading || isProductsLoading,
+    isLoading: isProductsLoading,
     isError,
     error,
     handleCategorySelect,

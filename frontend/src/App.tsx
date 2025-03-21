@@ -6,7 +6,6 @@ import Login from './pages/login';
 import Register from './pages/Register';
 import PrivateRoute from './components/PrivateRoute';
 import { useAuthStore } from './hooks/auth/useauth';
-import UserProfilePage from './components/userprofile/UserProfile';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -18,7 +17,7 @@ const queryClient = new QueryClient({
   },
 });
 
-function App() {
+function AppContent() {
   const { isCheckingAuth, isAuthenticated } = useAuthStore();
   
   // Show loading state while checking authentication
@@ -31,26 +30,26 @@ function App() {
   }
   
   return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route 
+          path="/home/*" 
+          element={
+            <PrivateRoute element={<Home />} isAuthenticated={isAuthenticated} />
+          } 
+        />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+      </Routes>
+    </Router>
+  );
+}
+
+function App() {
+  return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route 
-            path="/home" 
-            element={
-              <PrivateRoute element={<Home />} isAuthenticated={isAuthenticated} />
-            } 
-          />
-          <Route 
-            path="/profile" 
-            element={
-              <PrivateRoute element={<UserProfilePage />} isAuthenticated={isAuthenticated} />
-            } 
-          />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-        </Routes>
-      </Router>
+      <AppContent />
     </QueryClientProvider>
   );
 }

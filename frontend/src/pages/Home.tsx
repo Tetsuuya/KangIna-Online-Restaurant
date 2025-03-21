@@ -8,11 +8,9 @@ import { CategorySelector } from '../components/products/CatergorySelector';
 import { ProductGrid } from '../components/products/ProductGrid';
 import SearchBar from '../components/Searchbar';
 import UserProfile from '../components/userprofile/UserProfile';
-import { useAuthStore } from '../hooks/auth/useauth';
 
 const Home: React.FC = () => {
     const { activeSection } = useAppStore();
-    const { isAuthenticated } = useAuthStore();
    
     const {
         categories,
@@ -68,18 +66,8 @@ const Home: React.FC = () => {
                                 error={productsErrorDetails}
                             />
                         </>
-                    ) : activeSection === 'profile' && isAuthenticated ? (
-                        <UserProfile />
                     ) : activeSection === 'profile' ? (
-                        <div className="flex flex-col items-center justify-center h-[calc(100vh-2rem)]">
-                            <h1 className="text-2xl font-bold mb-4">Please log in to view your profile</h1>
-                            <button 
-                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                                onClick={() => window.location.href = '/login'}
-                            >
-                                Go to Login
-                            </button>
-                        </div>
+                        <UserProfile />
                     ) : (
                         <div className="p-4">Content not available</div>
                     )}
@@ -93,4 +81,3 @@ const Home: React.FC = () => {
 };
 
 export default Home;
-
