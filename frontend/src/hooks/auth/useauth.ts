@@ -1,5 +1,5 @@
 import { useQueryAuth } from './useQueryAuth';
-import { useMutationAuth } from './useMUtationAuth';
+import { useMutationAuth } from './useMutationAuth';
 
 export const useAuthStore = () => {
   const { userQuery } = useQueryAuth();

@@ -1,6 +1,6 @@
-// src/api/api.ts
+// src/lib/api.ts
 import axios from "axios";
-import { ACCESS_TOKEN, REFRESH_TOKEN } from "./constants";
+import { ACCESS_TOKEN, REFRESH_TOKEN } from "../api/constants";
 
 // Read backend URL from environment variable
 const API_URL = import.meta.env.VITE_API_URL;

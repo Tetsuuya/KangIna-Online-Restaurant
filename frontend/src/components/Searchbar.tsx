@@ -15,12 +15,14 @@ const SearchBar: React.FC<SearchBarProps> = ({
     if (initialValue !== searchTerm) {
       setSearchTerm(initialValue);
     }
-  }, [initialValue]);
+  }, [initialValue, searchTerm]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
-    onSearch(value);
+    if (onSearch) {
+      onSearch(value);
+    }
   };
 
   return (

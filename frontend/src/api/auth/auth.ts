@@ -1,4 +1,4 @@
-import api from './../api';
+import api from '../../lib/api';
 import { AuthUser, RegisterData, DietaryPreferences } from '../../utils/types';
 
 // The auth service handles direct API communication only

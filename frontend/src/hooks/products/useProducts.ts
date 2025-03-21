@@ -1,6 +1,7 @@
 // src/hooks/useProducts.ts
 import { useState, useCallback, useMemo } from 'react';
 import { useQueryProducts } from './useQueryProducts';
+import { Product } from '../../utils/types';
 
 export const useProducts = () => {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
@@ -20,13 +21,13 @@ export const useProducts = () => {
 
     // Apply category filter
     if (selectedCategory !== 'ALL') {
-      result = result.filter(product => product.category === selectedCategory);
+      result = result.filter((product: Product) => product.category === selectedCategory);
     }
 
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
-      result = result.filter(product => 
+      result = result.filter((product: Product) => 
         product.name.toLowerCase().includes(query) ||
         product.description?.toLowerCase().includes(query) ||
         product.category.toLowerCase().includes(query)

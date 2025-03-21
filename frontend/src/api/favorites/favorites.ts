@@ -1,4 +1,4 @@
-import api from '../api';
+import api from '../../lib/api'
 import { Product } from '../../utils/types';
 
 export const toggleFavorite = async (productId: number) => {

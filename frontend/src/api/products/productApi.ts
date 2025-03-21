@@ -1,5 +1,5 @@
 // src/api/productApi.ts
-import api from '../api';
+import api from '../../lib/api';
 import { Product, CategoryOption } from '../../utils/types';
 
 // Product-related API calls

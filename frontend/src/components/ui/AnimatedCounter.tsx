@@ -1,15 +1,21 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
-const AnimatedCounter = ({ targetValue, label, delay }) => {
+interface AnimatedCounterProps {
+  targetValue: number;
+  label: string;
+  delay: number;
+}
+
+const AnimatedCounter = ({ targetValue, label, delay }: AnimatedCounterProps) => {
   const [count, setCount] = useState(0);
   const duration = 2000; // Duration in milliseconds
   
   useEffect(() => {
-    let startTime;
-    let animationFrame;
+    let startTime: number | undefined;
+    let animationFrame: number | undefined;
     
-    const updateCount = (timestamp) => {
+    const updateCount = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
       const progress = timestamp - startTime;
       
@@ -35,7 +41,7 @@ const AnimatedCounter = ({ targetValue, label, delay }) => {
       }
       clearTimeout(timer);
     };
-  }, [targetValue, delay]);
+  }, [targetValue, delay, duration]);
   
   return (
     <motion.div
@@ -46,7 +52,7 @@ const AnimatedCounter = ({ targetValue, label, delay }) => {
       transition={{ delay: delay / 1000, duration: 0.5 }}
     >
       <span className="text-3xl font-bold text-[#32347C]">
-        {count}{targetValue > 999}
+        {count}{targetValue > 999 ? 'k' : ''}
       </span>
       <span className="block text-sm font-light">{label}</span>
     </motion.div>
