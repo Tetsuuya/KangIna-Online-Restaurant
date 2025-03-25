@@ -1,17 +1,11 @@
-# Project Setup Guide For Changes and Testing before pushing
+# Kangina - Online Restaurant Application #
 
-**Step 1:** Clone the Repository  
-git clone <repository-url>
+Kangina is a modern online restaurant application designed to provide a seamless food ordering experience. Users can browse a variety of dishes, add their favorite meals to the cart, and place orders with ease. The platform ensures convenience by allowing users to manage their profiles, save favorite items, and search for specific dishes effortlessly.
 
-**Step 2:** Navigate to the Frontend Folder  
-cd frontend
+## Features: ##
+- **User Profile Management** – Edit and update personal information.  
+- **Add to Cart** – Select multiple food items and review the cart before ordering.  
+- **Favorites** – Save preferred dishes for quick access.  
+- **Search Functionality** – Easily find dishes by name or category.  
 
-**Step 3:** Create a .env file inside the frontend folder  
-Inside the .env file, add:  
-**VITE_API_URL=https://kang-inas.vercel.app/api**
-
-**Step 4:** Install frontend dependencies  
-npm install
-
-**step 5**
-npm run dev
+Kangina is built to deliver a smooth and efficient restaurant ordering experience, ensuring that users can enjoy their favorite meals with just a few clicks.
